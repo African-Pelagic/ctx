@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod document;
+mod git;
 mod id;
 mod output;
 mod registry;
