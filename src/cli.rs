@@ -34,6 +34,9 @@ pub struct NewArgs {
     #[arg(long)]
     pub non_interactive: bool,
 
+    #[arg(long)]
+    pub append: bool,
+
     #[arg(long, value_delimiter = ',')]
     pub concerns: Vec<String>,
 
@@ -47,7 +50,11 @@ pub struct NewArgs {
 #[derive(Debug, Args)]
 pub struct AppendArgs {
     pub id: String,
+
+    #[arg(long)]
     pub concern: String,
+
+    #[arg(long)]
     pub text: String,
 }
 

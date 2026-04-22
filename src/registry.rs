@@ -181,11 +181,15 @@ pub fn sync_corpus_from(base: &Path) -> Result<Registry> {
 }
 
 pub fn load_or_sync() -> Result<Registry> {
-    let path = registry_path();
+    load_or_sync_from(Path::new("."))
+}
+
+pub fn load_or_sync_from(base: &Path) -> Result<Registry> {
+    let path = registry_path_from(base);
     if path.exists() {
         Registry::load(&path)
     } else {
-        sync_corpus()
+        sync_corpus_from(base)
     }
 }
 
