@@ -64,9 +64,19 @@ pub fn active_concerns(frontmatter: &Frontmatter) -> Vec<String> {
     active
 }
 
+pub fn recompute_status(frontmatter: &mut Frontmatter) {
+    if active_concerns(frontmatter).is_empty() {
+        frontmatter.status = Status::Superseded;
+    } else if frontmatter.superseded_by.is_empty() {
+        frontmatter.status = Status::Current;
+    } else {
+        frontmatter.status = Status::PartiallySuperseded;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{active_concerns, parse_document, write_document, Frontmatter, Scope, Status, SupersededBy};
+    use super::{active_concerns, parse_document, recompute_status, write_document, Frontmatter, Scope, Status, SupersededBy};
     use chrono::{TimeZone, Utc};
 
     fn sample_frontmatter() -> Frontmatter {
@@ -108,5 +118,23 @@ mod tests {
             active_concerns(&frontmatter),
             vec!["session-management".to_string(), "refresh-tokens".to_string()]
         );
+    }
+
+    #[test]
+    fn recomputes_partially_superseded_status() {
+        let mut frontmatter = sample_frontmatter();
+        recompute_status(&mut frontmatter);
+        assert_eq!(frontmatter.status, Status::PartiallySuperseded);
+    }
+
+    #[test]
+    fn recomputes_fully_superseded_status() {
+        let mut frontmatter = sample_frontmatter();
+        frontmatter.superseded_by.push(SupersededBy {
+            id: "ctx-3".to_string(),
+            concerns: vec!["session-management".to_string(), "refresh-tokens".to_string()],
+        });
+        recompute_status(&mut frontmatter);
+        assert_eq!(frontmatter.status, Status::Superseded);
     }
 }
