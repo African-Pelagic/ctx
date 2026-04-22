@@ -378,7 +378,7 @@ Predicates:
 
 - `--path`
 - `--component`
-- `--concern`
+- `--concern` (repeatable or comma-separated)
 
 Examples:
 
@@ -386,9 +386,11 @@ Examples:
 ctx assemble --component ctx-cli
 ctx assemble --path 'src/commands/*.rs' --paths
 ctx assemble --concern validation-rules --json
+ctx assemble --concern read-side-commands --concern validation-rules
 ```
 
 `assemble` includes current and partially superseded documents, and excludes fully superseded documents.
+When multiple concerns are supplied, documents matching any requested concern are included once, and the output reports which requested concerns matched.
 
 ### `ctx check`
 

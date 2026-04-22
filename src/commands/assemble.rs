@@ -11,6 +11,7 @@ struct AssembledDocument {
     id: String,
     file: String,
     active_concerns: Vec<String>,
+    matched_concerns: Vec<String>,
     content: String,
 }
 
@@ -31,6 +32,9 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
                     }
                     println!("# {} - {}", doc.id, doc.file);
                     println!("Active concerns: {}", doc.active_concerns.join(", "));
+                    if !doc.matched_concerns.is_empty() {
+                        println!("Matched concerns: {}", doc.matched_concerns.join(", "));
+                    }
                     if !doc.content.trim().is_empty() {
                         println!();
                         print!("{}", doc.content);
@@ -57,10 +61,11 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
             } else {
                 for doc in &docs {
                     println!(
-                        "{}\t{}\t{}",
+                        "{}\t{}\t{}\t{}",
                         doc.id,
                         doc.file,
-                        doc.active_concerns.join(",")
+                        doc.active_concerns.join(","),
+                        doc.matched_concerns.join(",")
                     );
                 }
             }
@@ -74,7 +79,7 @@ fn select_documents(
     registry: &crate::registry::Registry,
     args: &AssembleArgs,
 ) -> Result<Vec<AssembledDocument>> {
-    let has_predicate = args.path.is_some() || args.component.is_some() || args.concern.is_some();
+    let has_predicate = args.path.is_some() || args.component.is_some() || !args.concern.is_empty();
     if !has_predicate {
         bail!("at least one of --path, --component, or --concern is required");
     }
@@ -103,11 +108,15 @@ fn select_documents(
             .map(|component| entry.scope.components.iter().any(|item| item == component))
             .unwrap_or(false);
 
-        let concern_match = args
+        let mut matched_concerns = args
             .concern
-            .as_ref()
-            .map(|concern| entry.active_concerns.iter().any(|item| item == concern))
-            .unwrap_or(false);
+            .iter()
+            .filter(|concern| entry.active_concerns.iter().any(|item| item == *concern))
+            .cloned()
+            .collect::<Vec<_>>();
+        matched_concerns.sort();
+        matched_concerns.dedup();
+        let concern_match = !matched_concerns.is_empty();
 
         if !(path_match || component_match || concern_match) {
             continue;
@@ -121,6 +130,7 @@ fn select_documents(
             id: id.clone(),
             file: entry.file.clone(),
             active_concerns: entry.active_concerns.clone(),
+            matched_concerns,
             content: body,
         });
     }
@@ -186,12 +196,67 @@ mod tests {
         let args = AssembleArgs {
             path: None,
             component: Some("billing-service".into()),
-            concern: None,
+            concern: vec![],
             paths_only: false,
         };
 
         let docs = select_documents(&registry, &args).unwrap();
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].id, "ctx-a");
+        assert!(docs[0].matched_concerns.is_empty());
+    }
+
+    #[test]
+    fn selects_documents_matching_any_requested_concern() {
+        let registry = Registry {
+            schema_version: 1,
+            generated_at: Utc::now(),
+            generated_from_commit: None,
+            documents: [
+                (
+                    "ctx-a".to_string(),
+                    DocumentEntry {
+                        file: "Cargo.toml".into(),
+                        created: Utc::now(),
+                        status: Status::Current,
+                        concerns: vec!["billing".into()],
+                        active_concerns: vec!["billing".into()],
+                        scope: crate::document::Scope::default(),
+                        superseded_by: vec![],
+                    },
+                ),
+                (
+                    "ctx-b".to_string(),
+                    DocumentEntry {
+                        file: "README.md".into(),
+                        created: Utc::now(),
+                        status: Status::Current,
+                        concerns: vec!["auth".into(), "sessions".into()],
+                        active_concerns: vec!["auth".into(), "sessions".into()],
+                        scope: crate::document::Scope::default(),
+                        superseded_by: vec![],
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            concern_roster: Default::default(),
+            orphaned_concerns: vec![],
+            multi_owned_concerns: vec![],
+        };
+
+        let args = AssembleArgs {
+            path: None,
+            component: None,
+            concern: vec!["billing".into(), "sessions".into()],
+            paths_only: false,
+        };
+
+        let docs = select_documents(&registry, &args).unwrap();
+        assert_eq!(docs.len(), 2);
+        assert_eq!(docs[0].id, "ctx-a");
+        assert_eq!(docs[0].matched_concerns, vec!["billing".to_string()]);
+        assert_eq!(docs[1].id, "ctx-b");
+        assert_eq!(docs[1].matched_concerns, vec!["sessions".to_string()]);
     }
 }

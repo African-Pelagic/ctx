@@ -112,8 +112,12 @@ pub struct AssembleArgs {
     #[arg(long, help = "Match documents that declare this component")]
     pub component: Option<String>,
 
-    #[arg(long, help = "Match documents that currently own this concern")]
-    pub concern: Option<String>,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        help = "Match documents that currently own any of these concerns"
+    )]
+    pub concern: Vec<String>,
 
     #[arg(long = "paths", help = "Emit only matching document paths")]
     pub paths_only: bool,
