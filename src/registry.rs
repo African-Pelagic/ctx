@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     document::{Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document},
     git::current_commit_short,
+    ignore::{ContextIgnore, requires_refresh},
 };
 
 pub const SCHEMA_VERSION: u32 = 1;
@@ -154,10 +155,19 @@ pub fn registry_path_from(base: &Path) -> PathBuf {
 pub fn collect_documents_from(base: &Path) -> Result<Vec<(PathBuf, Frontmatter)>> {
     let pattern = format!("{}/{}", context_dir_from(base).display(), "*.md");
     let mut docs = Vec::new();
+    let ignore = ContextIgnore::load_from(base)?;
 
     for entry in glob::glob(&pattern).with_context(|| format!("invalid glob pattern {pattern}"))? {
         let path =
             entry.with_context(|| format!("failed to enumerate files matching {pattern}"))?;
+        let relative = path
+            .strip_prefix(base)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .into_owned();
+        if ignore.matches(&relative) {
+            continue;
+        }
         let content = fs::read_to_string(&path)
             .with_context(|| format!("failed to read document {}", path.display()))?;
         let (frontmatter, _) = parse_document(&content)
@@ -186,7 +196,7 @@ pub fn load_or_sync() -> Result<Registry> {
 
 pub fn load_or_sync_from(base: &Path) -> Result<Registry> {
     let path = registry_path_from(base);
-    if path.exists() {
+    if path.exists() && !requires_refresh(base, &path) {
         Registry::load(&path)
     } else {
         sync_corpus_from(base)
@@ -294,6 +304,29 @@ mod tests {
 
         assert_eq!(registry.documents.len(), 1);
         assert!(tmp.join(".context/.registry.json").exists());
+
+        fs::remove_dir_all(tmp).unwrap();
+    }
+
+    #[test]
+    fn skips_ignored_context_documents() {
+        let tmp = unique_temp_dir();
+        fs::create_dir_all(tmp.join(".context")).unwrap();
+        fs::write(tmp.join(".contextignore"), ".context/private.md\n").unwrap();
+
+        let created = Utc.with_ymd_and_hms(2025, 10, 15, 14, 23, 0).unwrap();
+        let frontmatter = Frontmatter {
+            id: "ctx-1".into(),
+            created,
+            status: Status::Current,
+            concerns: vec!["public".into()],
+            scope: Scope::default(),
+            superseded_by: vec![],
+        };
+        write_doc(&tmp.join(".context/private.md"), &frontmatter);
+
+        let registry = sync_corpus_from(&tmp).unwrap();
+        assert!(registry.documents.is_empty());
 
         fs::remove_dir_all(tmp).unwrap();
     }

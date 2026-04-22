@@ -11,6 +11,7 @@ use crate::{
     cli::CheckArgs,
     document::{Frontmatter, parse_document},
     git::is_stale,
+    ignore::ContextIgnore,
     index::CodeIndex,
     output::OutputMode,
     registry::{Registry, context_dir_from},
@@ -53,10 +54,11 @@ pub fn run(args: CheckArgs, output_mode: OutputMode) -> Result<()> {
 
 fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
     let context_dir = context_dir_from(base);
-    let (mut issues, docs) = scan_frontmatter(&context_dir)?;
+    let ignore = ContextIgnore::load_from(base)?;
+    let (mut issues, docs) = scan_frontmatter(base, &context_dir, &ignore)?;
 
     let registry = Registry::build(&docs);
-    let index = CodeIndex::build(base, &registry);
+    let index = CodeIndex::build(base, &registry)?;
 
     for concern in &registry.orphaned_concerns {
         issues.push(Issue {
@@ -121,7 +123,9 @@ fn as_severity(strict: bool) -> Severity {
 }
 
 fn scan_frontmatter(
+    base: &Path,
     context_dir: &Path,
+    ignore: &ContextIgnore,
 ) -> Result<(Vec<Issue>, Vec<(std::path::PathBuf, Frontmatter)>)> {
     let mut issues = Vec::new();
     let mut docs = Vec::new();
@@ -137,6 +141,14 @@ fn scan_frontmatter(
     paths.sort();
 
     for path in paths {
+        let relative = path
+            .strip_prefix(base)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .into_owned();
+        if ignore.matches(&relative) {
+            continue;
+        }
         let content = match fs::read_to_string(&path) {
             Ok(content) => content,
             Err(err) => {
@@ -210,6 +222,7 @@ fn staged_diff_issues(base: &Path) -> Result<Vec<Issue>> {
 }
 
 fn staged_context_files(base: &Path) -> Result<Vec<String>> {
+    let ignore = ContextIgnore::load_from(base)?;
     let output = Command::new("git")
         .current_dir(base)
         .args(["diff", "--cached", "--name-only", "--", ".context/"])
@@ -225,6 +238,7 @@ fn staged_context_files(base: &Path) -> Result<Vec<String>> {
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && line.ends_with(".md"))
+        .filter(|line| !ignore.matches(line))
         .map(ToOwned::to_owned)
         .collect::<Vec<_>>();
     files.sort();

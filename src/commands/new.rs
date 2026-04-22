@@ -17,7 +17,9 @@ use crate::{
         Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document,
         recompute_status, write_document,
     },
+    git::repo_files,
     id::generate_id,
+    ignore::ContextIgnore,
     output::OutputMode,
     registry::{context_dir_from, load_or_sync_from, sync_corpus_from},
 };
@@ -93,6 +95,8 @@ fn create_document_inner(args: &NewArgs, base: &Path) -> Result<()> {
     if concerns.is_empty() {
         bail!("--concerns is required in --non-interactive mode");
     }
+    let paths = normalize_values(&args.paths);
+    validate_scope_paths(base, &paths)?;
 
     let name = normalize_name(&args.name);
     let file_path = context_dir_from(base).join(format!("{name}.md"));
@@ -116,7 +120,7 @@ fn create_document_inner(args: &NewArgs, base: &Path) -> Result<()> {
         status: Status::Current,
         concerns,
         scope: Scope {
-            paths: normalize_values(&args.paths),
+            paths,
             components: normalize_values(&args.components),
         },
         superseded_by: Vec::new(),
@@ -158,6 +162,7 @@ fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<()> {
     } else {
         normalize_values(&args.paths)
     };
+    validate_scope_paths(base, &paths)?;
 
     let components = if args.components.is_empty() {
         let value = Input::<String>::with_theme(&theme)
@@ -247,6 +252,39 @@ fn normalize_values(values: &[String]) -> Vec<String> {
     normalized.sort();
     normalized.dedup();
     normalized
+}
+
+fn validate_scope_paths(base: &Path, scope_paths: &[String]) -> Result<()> {
+    let ignore = ContextIgnore::load_from(base)?;
+    if scope_paths.is_empty() {
+        return Ok(());
+    }
+
+    let repo_files = repo_files(base);
+    let mut violations = Vec::new();
+
+    for scope_path in scope_paths {
+        let pattern = glob::Pattern::new(scope_path)
+            .with_context(|| format!("invalid scope path pattern {scope_path}"))?;
+        let matches_ignored_file = repo_files
+            .iter()
+            .any(|repo_path| ignore.matches(repo_path) && pattern.matches(repo_path));
+
+        if matches_ignored_file || ignore.matches(scope_path) {
+            violations.push(scope_path.clone());
+        }
+    }
+
+    violations.sort();
+    violations.dedup();
+    if !violations.is_empty() {
+        bail!(
+            "scope paths blocked by .contextignore: {}",
+            violations.join(", ")
+        );
+    }
+
+    Ok(())
 }
 
 fn detect_conflicts(registry: &crate::registry::Registry, concerns: &[String]) -> Vec<Conflict> {
@@ -485,6 +523,32 @@ mod tests {
         let registry = fs::read_to_string(base.join(".context/.registry.json")).unwrap();
         assert!(registry.contains("multi_owned_concerns"));
         assert!(registry.contains("billing"));
+
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn rejects_ignored_scope_paths() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(base.join("secrets")).unwrap();
+        fs::create_dir_all(base.join(".context")).unwrap();
+        fs::write(base.join(".contextignore"), "secrets/**\n").unwrap();
+        fs::write(base.join("secrets/prod.env"), "TOKEN=secret\n").unwrap();
+
+        let args = NewArgs {
+            name: "billing-notes".into(),
+            non_interactive: true,
+            append: false,
+            concerns: vec!["billing".into()],
+            paths: vec!["secrets/**".into()],
+            components: vec![],
+        };
+
+        let err = create_document_inner(&args, &base).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("scope paths blocked by .contextignore")
+        );
 
         fs::remove_dir_all(base).unwrap();
     }

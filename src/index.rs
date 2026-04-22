@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     git::{commit_count_since_in, current_commit_short_in, last_modified_in, repo_files},
+    ignore::{ContextIgnore, requires_refresh},
     registry::{Registry, load_or_sync_from},
 };
 
@@ -38,8 +39,12 @@ pub struct CodeIndex {
 }
 
 impl CodeIndex {
-    pub fn build(base: &Path, registry: &Registry) -> CodeIndex {
-        let repo_files = repo_files(base);
+    pub fn build(base: &Path, registry: &Registry) -> Result<CodeIndex> {
+        let ignore = ContextIgnore::load_from(base)?;
+        let repo_files = repo_files(base)
+            .into_iter()
+            .filter(|path| !ignore.matches(path))
+            .collect::<Vec<_>>();
         let mut documents = BTreeMap::new();
 
         for (id, entry) in &registry.documents {
@@ -65,13 +70,13 @@ impl CodeIndex {
             );
         }
 
-        CodeIndex {
+        Ok(CodeIndex {
             schema_version: INDEX_SCHEMA_VERSION,
             generated_at: Utc::now(),
             generated_from_commit: current_commit_short_in(base),
             repo_files,
             documents,
-        }
+        })
     }
 
     pub fn load(path: &Path) -> Result<CodeIndex> {
@@ -105,7 +110,7 @@ pub fn index_path_from(base: &Path) -> PathBuf {
 
 pub fn build_index_from(base: &Path) -> Result<CodeIndex> {
     let registry = load_or_sync_from(base)?;
-    Ok(CodeIndex::build(base, &registry))
+    CodeIndex::build(base, &registry)
 }
 
 pub fn refresh_index_from(base: &Path) -> Result<CodeIndex> {
@@ -116,7 +121,7 @@ pub fn refresh_index_from(base: &Path) -> Result<CodeIndex> {
 
 pub fn load_or_build_index_from(base: &Path) -> Result<CodeIndex> {
     let path = index_path_from(base);
-    if path.exists() {
+    if path.exists() && !requires_refresh(base, &path) {
         let index = CodeIndex::load(&path)?;
         if index.generated_from_commit == current_commit_short_in(base) {
             return Ok(index);

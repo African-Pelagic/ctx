@@ -85,6 +85,31 @@ This gives `ctx` a model with a few important properties:
 
 The current source of truth is the markdown corpus plus frontmatter. Derived files such as the registry and code index are helpful, but they are not authoritative.
 
+## Safety Boundary
+
+Because `.context/` is intended to be committed, the corpus needs an explicit way to exclude local-only or sensitive material.
+
+`ctx` supports a repo-root `.contextignore` file with glob patterns. It is used to:
+
+- exclude matching `.context/*.md` documents from the managed corpus
+- exclude matching repo paths from the derived code index
+- block new documents from scoping ignored paths
+
+This gives teams a way to keep things like secret-bearing paths, private environment files, or local-only context notes out of the shared workflow corpus.
+
+Example:
+
+```text
+# Sensitive repo paths
+secrets/**
+.env*
+
+# Local-only context notes
+.context/private-*.md
+```
+
+Important caveat: `.contextignore` is a boundary on managed files and paths, not a content scrubber. It reduces accidental inclusion, but it does not sanitize secrets that a human or agent writes directly into markdown text.
+
 ## Core Ideas
 
 ### Concerns
@@ -276,6 +301,7 @@ It creates:
 - `.context/`
 - `.context/.registry.json`
 - `.context/.index.json` is also recognized as a derived file and ignored by `init`
+- optionally, you can add a repo-root `.contextignore` to exclude sensitive or local-only material
 
 ### `ctx new`
 
@@ -295,6 +321,8 @@ Important options:
 - `--append`
 
 Use `--append` only when overlap with an existing concern owner is deliberate and you want additive co-ownership rather than immediate replacement.
+
+`ctx new` also checks `.contextignore` and rejects scope paths that would pull ignored material into the managed corpus.
 
 Example:
 
@@ -411,6 +439,7 @@ It currently checks:
 - append-only violations in staged `.context` changes
 - managed frontmatter tampering
 - missing scoped paths in the repo
+- `.contextignore` is applied while scanning managed `.context` documents
 
 Exit codes:
 
@@ -442,6 +471,7 @@ Use it when:
 - you want to drive `ctx suggest`
 
 The index is stored in `.context/.index.json` and is derived, not authoritative.
+Ignored paths from `.contextignore` are excluded from the index.
 
 ### `ctx suggest`
 
