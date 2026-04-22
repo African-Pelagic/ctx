@@ -8,7 +8,10 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::document::{active_concerns, parse_document, Frontmatter, Scope, Status, SupersededBy};
+use crate::{
+    document::{active_concerns, parse_document, Frontmatter, Scope, Status, SupersededBy},
+    git::current_commit_short,
+};
 
 pub const SCHEMA_VERSION: u32 = 1;
 
@@ -103,7 +106,7 @@ impl Registry {
         Registry {
             schema_version: SCHEMA_VERSION,
             generated_at: Utc::now(),
-            generated_from_commit: None,
+            generated_from_commit: current_commit_short(),
             documents,
             concern_roster,
             orphaned_concerns,
@@ -146,10 +149,6 @@ pub fn registry_path() -> PathBuf {
 
 pub fn registry_path_from(base: &Path) -> PathBuf {
     context_dir_from(base).join(".registry.json")
-}
-
-pub fn collect_documents() -> Result<Vec<(PathBuf, Frontmatter)>> {
-    collect_documents_from(Path::new("."))
 }
 
 pub fn collect_documents_from(base: &Path) -> Result<Vec<(PathBuf, Frontmatter)>> {
