@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::{
     cli::AppendArgs,
@@ -90,7 +90,7 @@ mod tests {
     use super::{append_block, append_to_document};
     use crate::{
         cli::AppendArgs,
-        document::{write_document, Frontmatter, Scope, Status, SupersededBy},
+        document::{Frontmatter, Scope, Status, SupersededBy, write_document},
     };
 
     fn unique_temp_dir() -> PathBuf {

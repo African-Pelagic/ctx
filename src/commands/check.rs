@@ -9,10 +9,11 @@ use serde::Serialize;
 
 use crate::{
     cli::CheckArgs,
-    document::{parse_document, Frontmatter},
+    document::{Frontmatter, parse_document},
     git::is_stale,
+    index::CodeIndex,
     output::OutputMode,
-    registry::{context_dir_from, Registry},
+    registry::{Registry, context_dir_from},
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -36,7 +37,9 @@ pub fn run(args: CheckArgs, output_mode: OutputMode) -> Result<()> {
     emit_issues(&issues, output_mode)?;
 
     let has_error = issues.iter().any(|issue| issue.severity == Severity::Error);
-    let has_warning = issues.iter().any(|issue| issue.severity == Severity::Warning);
+    let has_warning = issues
+        .iter()
+        .any(|issue| issue.severity == Severity::Warning);
 
     if has_error {
         process::exit(1);
@@ -53,6 +56,7 @@ fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
     let (mut issues, docs) = scan_frontmatter(&context_dir)?;
 
     let registry = Registry::build(&docs);
+    let index = CodeIndex::build(base, &registry);
 
     for concern in &registry.orphaned_concerns {
         issues.push(Issue {
@@ -84,6 +88,20 @@ fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
         });
     }
 
+    for (id, document) in &index.documents {
+        if !document.missing_scope_paths.is_empty() {
+            issues.push(Issue {
+                severity: as_severity(strict),
+                code: "MISSING_SCOPED_PATH",
+                file: document.file.clone(),
+                message: format!(
+                    "document {id} declares scope paths with no repo matches: {}",
+                    document.missing_scope_paths.join(", ")
+                ),
+            });
+        }
+    }
+
     issues.extend(staged_diff_issues(base)?);
     issues.sort_by(|a, b| {
         a.file
@@ -102,7 +120,9 @@ fn as_severity(strict: bool) -> Severity {
     }
 }
 
-fn scan_frontmatter(context_dir: &Path) -> Result<(Vec<Issue>, Vec<(std::path::PathBuf, Frontmatter)>)> {
+fn scan_frontmatter(
+    context_dir: &Path,
+) -> Result<(Vec<Issue>, Vec<(std::path::PathBuf, Frontmatter)>)> {
     let mut issues = Vec::new();
     let mut docs = Vec::new();
     if !context_dir.exists() {
@@ -239,14 +259,18 @@ struct RemovedLine {
 
 fn removed_lines(old_content: &str, new_content: Option<&str>) -> Vec<RemovedLine> {
     let old_lines = old_content.lines().collect::<Vec<_>>();
-    let new_lines = new_content
-        .unwrap_or("")
-        .lines()
-        .collect::<Vec<_>>();
+    let new_lines = new_content.unwrap_or("").lines().collect::<Vec<_>>();
 
     let lcs = lcs_table(&old_lines, &new_lines);
     let mut removed = Vec::new();
-    backtrack_removed(&old_lines, &new_lines, &lcs, old_lines.len(), new_lines.len(), &mut removed);
+    backtrack_removed(
+        &old_lines,
+        &new_lines,
+        &lcs,
+        old_lines.len(),
+        new_lines.len(),
+        &mut removed,
+    );
     removed.sort_by_key(|line| line.line_number);
     removed
 }
@@ -426,7 +450,36 @@ mod tests {
         fs::write(base.join(".context/bad.md"), "---\nnot: [valid\n---\n").unwrap();
 
         let issues = collect_issues(&base, false).unwrap();
-        assert!(issues.iter().any(|issue| issue.code == "FRONTMATTER_INVALID"));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "FRONTMATTER_INVALID")
+        );
+
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn reports_missing_scoped_paths() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(base.join(".context")).unwrap();
+        run_git(&base, &["init"]);
+        run_git(&base, &["config", "user.email", "ctx@example.com"]);
+        run_git(&base, &["config", "user.name", "Ctx Test"]);
+        fs::write(
+            base.join(".context/note.md"),
+            "---\nid: ctx-1\ncreated: 2025-10-15T14:23:00Z\nstatus: current\nconcerns:\n- billing\nscope:\n  paths:\n  - src/missing/**\n  components: []\nsuperseded_by: []\n---\nBody line\n",
+        )
+        .unwrap();
+        run_git(&base, &["add", "."]);
+        run_git(&base, &["commit", "-m", "initial"]);
+
+        let issues = collect_issues(&base, false).unwrap();
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "MISSING_SCOPED_PATH")
+        );
 
         fs::remove_dir_all(base).unwrap();
     }
@@ -457,7 +510,11 @@ mod tests {
         run_git(&base, &["add", ".context/note.md"]);
 
         let issues = collect_issues(&base, false).unwrap();
-        assert!(issues.iter().any(|issue| issue.code == "APPEND_ONLY_VIOLATION"));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "APPEND_ONLY_VIOLATION")
+        );
 
         fs::remove_dir_all(base).unwrap();
     }
@@ -488,7 +545,11 @@ mod tests {
         run_git(&base, &["add", ".context/note.md"]);
 
         let issues = collect_issues(&base, false).unwrap();
-        assert!(issues.iter().any(|issue| issue.code == "MANAGED_FIELD_TAMPERING"));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "MANAGED_FIELD_TAMPERING")
+        );
 
         fs::remove_dir_all(base).unwrap();
     }

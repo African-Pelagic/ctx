@@ -3,6 +3,7 @@ mod commands;
 mod document;
 mod git;
 mod id;
+mod index;
 mod output;
 mod registry;
 

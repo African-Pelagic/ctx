@@ -11,6 +11,7 @@ use crate::{
 struct ListRow {
     concern: String,
     owners: Vec<String>,
+    files: Vec<String>,
     notes: Vec<String>,
 }
 
@@ -33,14 +34,15 @@ pub fn run(output_mode: OutputMode) -> Result<()> {
         OutputMode::Porcelain => {
             for row in &rows {
                 println!(
-                    "{}\t{}\t{}",
+                    "{}\t{}\t{}\t{}",
                     row.concern,
                     row.owners.join(","),
+                    row.files.join(","),
                     row.notes.join(",")
                 );
             }
             for concern in &registry.orphaned_concerns {
-                println!("orphaned\t{concern}\t");
+                println!("orphaned\t{concern}\t\t");
             }
         }
     }
@@ -53,23 +55,28 @@ fn build_rows(registry: &crate::registry::Registry) -> Vec<ListRow> {
 
     for (concern, entry) in &registry.concern_roster {
         let mut notes = Vec::new();
+        let mut files = Vec::new();
         if entry.owners.len() > 1 {
             notes.push("multi-owned".to_string());
         }
 
         for owner in &entry.owners {
             if let Some(doc) = registry.documents.get(owner) {
+                files.push(doc.file.clone());
                 if is_stale(&doc_path(&doc.file), &doc.scope.paths) {
                     notes.push(format!("stale:{owner}"));
                 }
             }
         }
 
+        files.sort();
+        files.dedup();
         notes.sort();
         notes.dedup();
         rows.push(ListRow {
             concern: concern.clone(),
             owners: entry.owners.clone(),
+            files,
             notes,
         });
     }
@@ -81,13 +88,47 @@ fn print_human(rows: &[ListRow], orphaned_concerns: &[String]) {
     if rows.is_empty() {
         println!("No active concerns.");
     } else {
-        println!("Concern\tOwners\tNotes");
+        let headers = ["Concern", "Owners", "Files", "Notes"];
+        let concern_width = rows
+            .iter()
+            .map(|row| row.concern.len())
+            .max()
+            .unwrap_or(0)
+            .max(headers[0].len());
+        let owners_width = rows
+            .iter()
+            .map(|row| row.owners.join(", ").len())
+            .max()
+            .unwrap_or(0)
+            .max(headers[1].len());
+        let files_width = rows
+            .iter()
+            .map(|row| row.files.join(", ").len())
+            .max()
+            .unwrap_or(0)
+            .max(headers[2].len());
+        let notes_width = rows
+            .iter()
+            .map(|row| display_or_dash(&row.notes).len())
+            .max()
+            .unwrap_or(0)
+            .max(headers[3].len());
+
+        println!(
+            "{:<concern_width$}  {:<owners_width$}  {:<files_width$}  {:<notes_width$}",
+            headers[0], headers[1], headers[2], headers[3],
+        );
+        println!(
+            "{:-<concern_width$}  {:-<owners_width$}  {:-<files_width$}  {:-<notes_width$}",
+            "", "", "", "",
+        );
         for row in rows {
+            let owners = row.owners.join(", ");
+            let files = row.files.join(", ");
+            let notes = display_or_dash(&row.notes);
             println!(
-                "{}\t{}\t{}",
-                row.concern,
-                row.owners.join(", "),
-                row.notes.join(", ")
+                "{:<concern_width$}  {:<owners_width$}  {:<files_width$}  {:<notes_width$}",
+                row.concern, owners, files, notes
             );
         }
     }
@@ -98,6 +139,14 @@ fn print_human(rows: &[ListRow], orphaned_concerns: &[String]) {
         for concern in orphaned_concerns {
             println!("{concern}");
         }
+    }
+}
+
+fn display_or_dash(values: &[String]) -> String {
+    if values.is_empty() {
+        "-".to_string()
+    } else {
+        values.join(", ")
     }
 }
 
@@ -147,5 +196,6 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].concern, "billing");
         assert_eq!(rows[0].owners, vec!["ctx-a".to_string()]);
+        assert_eq!(rows[0].files, vec![".context/a.md".to_string()]);
     }
 }

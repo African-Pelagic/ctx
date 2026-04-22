@@ -1,15 +1,10 @@
 use std::fs;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use glob::Pattern;
 use serde::Serialize;
 
-use crate::{
-    cli::AssembleArgs,
-    document::Status,
-    output::OutputMode,
-    registry::load_or_sync,
-};
+use crate::{cli::AssembleArgs, document::Status, output::OutputMode, registry::load_or_sync};
 
 #[derive(Debug, Serialize)]
 struct AssembledDocument {
@@ -61,7 +56,12 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
                 }
             } else {
                 for doc in &docs {
-                    println!("{}\t{}\t{}", doc.id, doc.file, doc.active_concerns.join(","));
+                    println!(
+                        "{}\t{}\t{}",
+                        doc.id,
+                        doc.file,
+                        doc.active_concerns.join(",")
+                    );
                 }
             }
         }
@@ -80,7 +80,9 @@ fn select_documents(
     }
 
     let compiled_path = match &args.path {
-        Some(path) => Some(Pattern::new(path).with_context(|| format!("invalid path pattern {path}"))?),
+        Some(path) => {
+            Some(Pattern::new(path).with_context(|| format!("invalid path pattern {path}"))?)
+        }
         None => None,
     };
 

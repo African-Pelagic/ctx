@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    document::{active_concerns, parse_document, Frontmatter, Scope, Status, SupersededBy},
+    document::{Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document},
     git::current_commit_short,
 };
 
@@ -156,7 +156,8 @@ pub fn collect_documents_from(base: &Path) -> Result<Vec<(PathBuf, Frontmatter)>
     let mut docs = Vec::new();
 
     for entry in glob::glob(&pattern).with_context(|| format!("invalid glob pattern {pattern}"))? {
-        let path = entry.with_context(|| format!("failed to enumerate files matching {pattern}"))?;
+        let path =
+            entry.with_context(|| format!("failed to enumerate files matching {pattern}"))?;
         let content = fs::read_to_string(&path)
             .with_context(|| format!("failed to read document {}", path.display()))?;
         let (frontmatter, _) = parse_document(&content)
@@ -194,10 +195,9 @@ pub fn load_or_sync_from(base: &Path) -> Result<Registry> {
 
 #[cfg(test)]
 mod tests {
-    use super::{sync_corpus_from, Registry, SCHEMA_VERSION};
+    use super::{Registry, SCHEMA_VERSION, sync_corpus_from};
     use std::{
-        env,
-        fs,
+        env, fs,
         path::{Path, PathBuf},
         time::{SystemTime, UNIX_EPOCH},
     };
@@ -263,7 +263,10 @@ mod tests {
             registry.documents["ctx-a"].active_concerns,
             vec!["authentication".to_string()]
         );
-        assert_eq!(registry.concern_roster["token-expiry"].owners, vec!["ctx-b".to_string()]);
+        assert_eq!(
+            registry.concern_roster["token-expiry"].owners,
+            vec!["ctx-b".to_string()]
+        );
         assert_eq!(registry.orphaned_concerns, Vec::<String>::new());
         assert_eq!(registry.multi_owned_concerns, Vec::<String>::new());
     }

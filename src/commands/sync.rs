@@ -11,7 +11,11 @@ pub fn run(output_mode: OutputMode) -> Result<()> {
             println!(
                 "Synced {} context document{}",
                 registry.documents.len(),
-                if registry.documents.len() == 1 { "" } else { "s" }
+                if registry.documents.len() == 1 {
+                    ""
+                } else {
+                    "s"
+                }
             );
         }
         OutputMode::Json => {

@@ -1,11 +1,7 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::{
-    document::Status,
-    output::OutputMode,
-    registry::load_or_sync,
-};
+use crate::{document::Status, output::OutputMode, registry::load_or_sync};
 
 #[derive(Debug, Serialize)]
 struct GcEntry {

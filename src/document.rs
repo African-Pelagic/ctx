@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -76,7 +76,10 @@ pub fn recompute_status(frontmatter: &mut Frontmatter) {
 
 #[cfg(test)]
 mod tests {
-    use super::{active_concerns, parse_document, recompute_status, write_document, Frontmatter, Scope, Status, SupersededBy};
+    use super::{
+        Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document,
+        recompute_status, write_document,
+    };
     use chrono::{TimeZone, Utc};
 
     fn sample_frontmatter() -> Frontmatter {
@@ -116,7 +119,10 @@ mod tests {
 
         assert_eq!(
             active_concerns(&frontmatter),
-            vec!["session-management".to_string(), "refresh-tokens".to_string()]
+            vec![
+                "session-management".to_string(),
+                "refresh-tokens".to_string()
+            ]
         );
     }
 
@@ -132,7 +138,10 @@ mod tests {
         let mut frontmatter = sample_frontmatter();
         frontmatter.superseded_by.push(SupersededBy {
             id: "ctx-3".to_string(),
-            concerns: vec!["session-management".to_string(), "refresh-tokens".to_string()],
+            concerns: vec![
+                "session-management".to_string(),
+                "refresh-tokens".to_string(),
+            ],
         });
         recompute_status(&mut frontmatter);
         assert_eq!(frontmatter.status, Status::Superseded);

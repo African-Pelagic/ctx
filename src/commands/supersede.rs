@@ -1,10 +1,10 @@
 use std::{fs, path::Path};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::{
     cli::SupersedeArgs,
-    document::{active_concerns, parse_document, recompute_status, write_document, SupersededBy},
+    document::{SupersededBy, active_concerns, parse_document, recompute_status, write_document},
     output::OutputMode,
     registry::{load_or_sync_from, sync_corpus_from},
 };
@@ -14,10 +14,7 @@ pub fn run(args: SupersedeArgs, output_mode: OutputMode) -> Result<()> {
 
     match output_mode {
         OutputMode::Human => {
-            println!(
-                "Recorded supersession for {} by {}",
-                args.id, args.by_id
-            );
+            println!("Recorded supersession for {} by {}", args.id, args.by_id);
         }
         OutputMode::Json => {
             println!(
@@ -83,9 +80,7 @@ fn supersede_document(args: &SupersedeArgs, base: &Path) -> Result<()> {
             id: args.by_id.clone(),
             concerns,
         });
-        frontmatter
-            .superseded_by
-            .sort_by(|a, b| a.id.cmp(&b.id));
+        frontmatter.superseded_by.sort_by(|a, b| a.id.cmp(&b.id));
     }
 
     recompute_status(&mut frontmatter);
@@ -124,7 +119,7 @@ mod tests {
     use super::{normalize_values, supersede_document};
     use crate::{
         cli::SupersedeArgs,
-        document::{write_document, Frontmatter, Scope, Status, SupersededBy},
+        document::{Frontmatter, Scope, Status, SupersededBy, write_document},
     };
 
     fn unique_temp_dir() -> PathBuf {
@@ -200,14 +195,21 @@ mod tests {
         };
 
         write_doc(&ctx_dir.join("source.md"), &source, "source body\n");
-        write_doc(&ctx_dir.join("replacement.md"), &replacement, "replacement body\n");
+        write_doc(
+            &ctx_dir.join("replacement.md"),
+            &replacement,
+            "replacement body\n",
+        );
         write_registry(base);
     }
 
     #[test]
     fn normalizes_and_deduplicates_concerns() {
         assert_eq!(
-            normalize_values(&[" token-expiry ".into(), "session-management, token-expiry".into()]),
+            normalize_values(&[
+                " token-expiry ".into(),
+                "session-management, token-expiry".into()
+            ]),
             vec!["session-management".to_string(), "token-expiry".to_string()]
         );
     }

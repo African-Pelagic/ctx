@@ -5,8 +5,9 @@ use std::{
 
 use chrono::{DateTime, Utc};
 
-pub fn last_modified(path: &Path) -> Option<DateTime<Utc>> {
+pub fn last_modified_in(base: &Path, path: &Path) -> Option<DateTime<Utc>> {
     let output = Command::new("git")
+        .current_dir(base)
         .args(["log", "-1", "--format=%aI", "--"])
         .arg(path)
         .output()
@@ -27,13 +28,23 @@ pub fn last_modified(path: &Path) -> Option<DateTime<Utc>> {
         .map(|dt| dt.with_timezone(&Utc))
 }
 
-pub fn commit_count_since(since: &DateTime<Utc>, paths: &[String]) -> Option<usize> {
+pub fn commit_count_since_in(
+    base: &Path,
+    since: &DateTime<Utc>,
+    paths: &[String],
+) -> Option<usize> {
     if paths.is_empty() {
         return Some(0);
     }
 
     let mut cmd = Command::new("git");
-    cmd.args(["log", "--oneline", &format!("{}..HEAD", since.to_rfc3339()), "--"]);
+    cmd.current_dir(base);
+    cmd.args([
+        "log",
+        "--oneline",
+        &format!("{}..HEAD", since.to_rfc3339()),
+        "--",
+    ]);
     for path in paths {
         cmd.arg(path);
     }
@@ -48,7 +59,11 @@ pub fn commit_count_since(since: &DateTime<Utc>, paths: &[String]) -> Option<usi
 }
 
 pub fn is_stale(doc_file: &Path, scope_paths: &[String]) -> bool {
-    let last_modified = match last_modified(doc_file) {
+    is_stale_in(Path::new("."), doc_file, scope_paths)
+}
+
+pub fn is_stale_in(base: &Path, doc_file: &Path, scope_paths: &[String]) -> bool {
+    let last_modified = match last_modified_in(base, doc_file) {
         Some(value) => value,
         None => return false,
     };
@@ -58,14 +73,19 @@ pub fn is_stale(doc_file: &Path, scope_paths: &[String]) -> bool {
         return false;
     }
 
-    match commit_count_since(&last_modified, scope_paths) {
+    match commit_count_since_in(base, &last_modified, scope_paths) {
         Some(count) => count >= 10,
         None => false,
     }
 }
 
 pub fn current_commit_short() -> Option<String> {
+    current_commit_short_in(Path::new("."))
+}
+
+pub fn current_commit_short_in(base: &Path) -> Option<String> {
     let output = Command::new("git")
+        .current_dir(base)
         .args(["rev-parse", "--short", "HEAD"])
         .output()
         .ok()?;
@@ -81,6 +101,31 @@ pub fn current_commit_short() -> Option<String> {
     } else {
         Some(short.to_string())
     }
+}
+
+pub fn repo_files(base: &Path) -> Vec<String> {
+    let output = match Command::new("git")
+        .current_dir(base)
+        .args(["ls-files", "--cached", "--others", "--exclude-standard"])
+        .output()
+    {
+        Ok(output) => output,
+        Err(_) => return Vec::new(),
+    };
+
+    if !output.status.success() {
+        return Vec::new();
+    }
+
+    let mut files = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+    files.sort();
+    files.dedup();
+    files
 }
 
 pub fn doc_path(path: &str) -> PathBuf {

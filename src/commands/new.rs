@@ -1,20 +1,22 @@
 use std::{
     error::Error,
-    fs,
-    fmt,
+    fmt, fs,
     io::{self, IsTerminal},
     path::{Path, PathBuf},
     process,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::Utc;
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
+use dialoguer::{Confirm, Input, Select, theme::ColorfulTheme};
 use serde::Serialize;
 
 use crate::{
     cli::NewArgs,
-    document::{active_concerns, parse_document, recompute_status, write_document, Frontmatter, Scope, Status, SupersededBy},
+    document::{
+        Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document,
+        recompute_status, write_document,
+    },
     id::generate_id,
     output::OutputMode,
     registry::{context_dir_from, load_or_sync_from, sync_corpus_from},
@@ -176,10 +178,7 @@ fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<()> {
         created,
         status: Status::Current,
         concerns: concerns.clone(),
-        scope: Scope {
-            paths,
-            components,
-        },
+        scope: Scope { paths, components },
         superseded_by: Vec::new(),
     };
 
@@ -296,7 +295,12 @@ fn emit_conflicts(conflicts: &[Conflict], output_mode: OutputMode) -> Result<()>
     Ok(())
 }
 
-fn apply_supersession(base: &Path, source_id: &str, replacement_id: &str, concern: &str) -> Result<()> {
+fn apply_supersession(
+    base: &Path,
+    source_id: &str,
+    replacement_id: &str,
+    concern: &str,
+) -> Result<()> {
     let registry = load_or_sync_from(base)?;
     let source_entry = registry
         .documents
@@ -349,7 +353,7 @@ mod tests {
     use super::{create_document_inner, detect_conflicts, normalize_name, normalize_values};
     use crate::{
         cli::NewArgs,
-        document::{write_document, Frontmatter, Scope, Status},
+        document::{Frontmatter, Scope, Status, write_document},
         registry::Registry,
     };
 
