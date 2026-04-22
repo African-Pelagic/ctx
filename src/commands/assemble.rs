@@ -25,23 +25,34 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
 
     match output_mode {
         OutputMode::Human => {
-            for (index, doc) in docs.iter().enumerate() {
-                if index > 0 {
-                    println!();
+            if args.paths_only {
+                for doc in &docs {
+                    println!("{}", doc.file);
                 }
-                println!("# {} - {}", doc.id, doc.file);
-                println!("Active concerns: {}", doc.active_concerns.join(", "));
-                if !doc.content.trim().is_empty() {
-                    println!();
-                    print!("{}", doc.content);
-                    if !doc.content.ends_with('\n') {
+            } else {
+                for (index, doc) in docs.iter().enumerate() {
+                    if index > 0 {
                         println!();
+                    }
+                    println!("# {} - {}", doc.id, doc.file);
+                    println!("Active concerns: {}", doc.active_concerns.join(", "));
+                    if !doc.content.trim().is_empty() {
+                        println!();
+                        print!("{}", doc.content);
+                        if !doc.content.ends_with('\n') {
+                            println!();
+                        }
                     }
                 }
             }
         }
         OutputMode::Json => {
-            println!("{}", serde_json::to_string_pretty(&docs)?);
+            if args.paths_only {
+                let paths = docs.iter().map(|doc| doc.file.clone()).collect::<Vec<_>>();
+                println!("{}", serde_json::to_string_pretty(&paths)?);
+            } else {
+                println!("{}", serde_json::to_string_pretty(&docs)?);
+            }
         }
         OutputMode::Porcelain => {
             if args.paths_only {

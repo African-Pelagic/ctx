@@ -6,12 +6,16 @@ mod id;
 mod output;
 mod registry;
 
-use anyhow::Result;
 use clap::Parser;
 
-fn main() -> Result<()> {
+fn main() {
     let cli = cli::Cli::parse();
-    let output_mode = output::OutputMode::from_flags(cli.json, cli.porcelain)?;
+    let output_mode = match output::OutputMode::from_flags(cli.json, cli.porcelain) {
+        Ok(mode) => mode,
+        Err(err) => output::print_error_and_exit(output::OutputMode::Human, &err),
+    };
 
-    commands::run(cli.command, output_mode)
+    if let Err(err) = commands::run(cli.command, output_mode) {
+        output::print_error_and_exit(output_mode, &err);
+    }
 }

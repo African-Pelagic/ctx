@@ -2,17 +2,19 @@ use std::{
     error::Error,
     fs,
     fmt,
+    io::{self, IsTerminal},
     path::{Path, PathBuf},
     process,
 };
 
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
+use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
 use serde::Serialize;
 
 use crate::{
     cli::NewArgs,
-    document::{write_document, Frontmatter, Scope, Status},
+    document::{active_concerns, parse_document, recompute_status, write_document, Frontmatter, Scope, Status, SupersededBy},
     id::generate_id,
     output::OutputMode,
     registry::{context_dir_from, load_or_sync_from, sync_corpus_from},
@@ -79,7 +81,10 @@ fn create_document(args: &NewArgs, base: &Path) -> std::result::Result<(), NewCo
 
 fn create_document_inner(args: &NewArgs, base: &Path) -> Result<()> {
     if !args.non_interactive {
-        bail!("interactive mode is not implemented yet; use --non-interactive");
+        if !io::stdin().is_terminal() {
+            bail!("interactive mode requires a TTY; use --non-interactive");
+        }
+        return create_document_interactive(args, base);
     }
 
     let concerns = normalize_values(&args.concerns);
@@ -118,6 +123,101 @@ fn create_document_inner(args: &NewArgs, base: &Path) -> Result<()> {
     let content = write_document(&frontmatter, "")?;
     fs::write(&file_path, content)
         .with_context(|| format!("failed to write {}", file_path.display()))?;
+
+    sync_corpus_from(base)?;
+    Ok(())
+}
+
+fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<()> {
+    let theme = ColorfulTheme::default();
+    let name = normalize_name(&args.name);
+    let file_path = context_dir_from(base).join(format!("{name}.md"));
+    if file_path.exists() {
+        bail!("document already exists at {}", file_path.display());
+    }
+
+    let concerns = if args.concerns.is_empty() {
+        normalize_values(&[Input::<String>::with_theme(&theme)
+            .with_prompt("Concerns (comma-separated)")
+            .interact_text()?])
+    } else {
+        normalize_values(&args.concerns)
+    };
+    if concerns.is_empty() {
+        bail!("at least one concern is required");
+    }
+
+    let paths = if args.paths.is_empty() {
+        let value = Input::<String>::with_theme(&theme)
+            .with_prompt("Scope paths (comma-separated, optional)")
+            .allow_empty(true)
+            .interact_text()?;
+        normalize_values(&[value])
+    } else {
+        normalize_values(&args.paths)
+    };
+
+    let components = if args.components.is_empty() {
+        let value = Input::<String>::with_theme(&theme)
+            .with_prompt("Components (comma-separated, optional)")
+            .allow_empty(true)
+            .interact_text()?;
+        normalize_values(&[value])
+    } else {
+        normalize_values(&args.components)
+    };
+
+    let registry = load_or_sync_from(base)?;
+    let conflicts = detect_conflicts(&registry, &concerns);
+
+    let created = Utc::now();
+    let frontmatter = Frontmatter {
+        id: generate_id(&name, &created),
+        created,
+        status: Status::Current,
+        concerns: concerns.clone(),
+        scope: Scope {
+            paths,
+            components,
+        },
+        superseded_by: Vec::new(),
+    };
+
+    fs::create_dir_all(context_dir_from(base))
+        .with_context(|| format!("failed to create {}", context_dir_from(base).display()))?;
+    let content = write_document(&frontmatter, "")?;
+    fs::write(&file_path, content)
+        .with_context(|| format!("failed to write {}", file_path.display()))?;
+
+    for conflict in conflicts {
+        let selection = Select::with_theme(&theme)
+            .with_prompt(format!(
+                "Concern '{}' is already owned by {}",
+                conflict.concern,
+                conflict.owners.join(", ")
+            ))
+            .items(&[
+                "Additive (keep both current)",
+                "Superseding (replace existing owner)",
+            ])
+            .default(0)
+            .interact()?;
+
+        if selection == 1 {
+            for owner_id in &conflict.owners {
+                apply_supersession(base, owner_id, &frontmatter.id, &conflict.concern)?;
+            }
+        } else if !Confirm::with_theme(&theme)
+            .with_prompt(format!(
+                "Keep additive multi-ownership for '{}'?",
+                conflict.concern
+            ))
+            .default(true)
+            .interact()?
+        {
+            bail!("interactive creation cancelled");
+        }
+    }
 
     sync_corpus_from(base)?;
     Ok(())
@@ -193,6 +293,46 @@ fn emit_conflicts(conflicts: &[Conflict], output_mode: OutputMode) -> Result<()>
             }
         }
     }
+    Ok(())
+}
+
+fn apply_supersession(base: &Path, source_id: &str, replacement_id: &str, concern: &str) -> Result<()> {
+    let registry = load_or_sync_from(base)?;
+    let source_entry = registry
+        .documents
+        .get(source_id)
+        .with_context(|| format!("document {} not found", source_id))?;
+    let source_path = base.join(&source_entry.file);
+    let content = fs::read_to_string(&source_path)
+        .with_context(|| format!("failed to read {}", source_path.display()))?;
+    let (mut frontmatter, body) = parse_document(&content)
+        .with_context(|| format!("failed to parse frontmatter in {}", source_path.display()))?;
+
+    let active = active_concerns(&frontmatter);
+    if !active.iter().any(|item| item == concern) {
+        return Ok(());
+    }
+
+    if let Some(entry) = frontmatter
+        .superseded_by
+        .iter_mut()
+        .find(|entry| entry.id == replacement_id)
+    {
+        entry.concerns.push(concern.to_string());
+        entry.concerns.sort();
+        entry.concerns.dedup();
+    } else {
+        frontmatter.superseded_by.push(SupersededBy {
+            id: replacement_id.to_string(),
+            concerns: vec![concern.to_string()],
+        });
+        frontmatter.superseded_by.sort_by(|a, b| a.id.cmp(&b.id));
+    }
+
+    recompute_status(&mut frontmatter);
+    let updated = write_document(&frontmatter, &body)?;
+    fs::write(&source_path, updated)
+        .with_context(|| format!("failed to write {}", source_path.display()))?;
     Ok(())
 }
 
