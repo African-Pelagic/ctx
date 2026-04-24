@@ -31,6 +31,8 @@ pub enum Command {
     Index,
     #[command(about = "List active concerns, owners, and roster notes")]
     List,
+    #[command(about = "Explain how agents and humans should use ctx in this repo")]
+    Guidance(GuidanceArgs),
     #[command(about = "Suggest likely relevant context from the derived code index")]
     Suggest(SuggestArgs),
     #[command(about = "Append body text to an existing document under an active concern")]
@@ -130,6 +132,15 @@ pub struct SuggestArgs {
         help = "Return documents whose scoped paths are likely relevant to this repo path"
     )]
     pub path: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct GuidanceArgs {
+    #[arg(
+        long,
+        help = "Update any AGENTS.md files in the repo with ctx usage instructions"
+    )]
+    pub add: bool,
 }
 
 #[derive(Debug, Args)]
