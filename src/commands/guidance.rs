@@ -177,6 +177,24 @@ fn upsert_guidance_block(path: &Path, block: &str) -> Result<()> {
             }
         }
         merged
+    } else if let Some((start, end)) = find_ctx_section_range(&content) {
+        let mut merged = String::new();
+        merged.push_str(&content[..start]);
+        if !merged.is_empty() && !merged.ends_with('\n') {
+            merged.push('\n');
+        }
+        merged.push_str(block);
+        if end < content.len() {
+            let suffix = content[end..].trim_start_matches('\n');
+            if !suffix.is_empty() {
+                merged.push('\n');
+                merged.push_str(suffix);
+                if !merged.ends_with('\n') {
+                    merged.push('\n');
+                }
+            }
+        }
+        merged
     } else if content.trim().is_empty() {
         block.to_string()
     } else {
@@ -193,6 +211,22 @@ fn upsert_guidance_block(path: &Path, block: &str) -> Result<()> {
     Ok(())
 }
 
+fn find_ctx_section_range(content: &str) -> Option<(usize, usize)> {
+    let start = content.find("\n## ctx\n").map(|idx| idx + 1).or_else(|| {
+        content
+            .strip_prefix("## ctx\n")
+            .map(|_| 0)
+    })?;
+
+    let rest = &content[start + "## ctx\n".len()..];
+    let end = rest
+        .find("\n## ")
+        .map(|idx| start + "## ctx\n".len() + idx + 1)
+        .unwrap_or(content.len());
+
+    Some((start, end))
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -201,7 +235,10 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{find_agents_files, guidance_block, guidance_text, upsert_agents_files};
+    use super::{
+        find_agents_files, find_ctx_section_range, guidance_block, guidance_text,
+        upsert_agents_files,
+    };
 
     fn unique_temp_dir() -> PathBuf {
         let nanos = SystemTime::now()
@@ -248,6 +285,34 @@ mod tests {
         assert!(!content.contains("\nold\n"));
 
         fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn replaces_existing_ctx_section_without_markers() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(&base).unwrap();
+        fs::write(
+            base.join("AGENTS.md"),
+            "# Agents\n\n## ctx\n\nold ctx guidance\n\n## Other\n\nkeep this\n",
+        )
+        .unwrap();
+
+        let updated = upsert_agents_files(&base, guidance_text()).unwrap();
+
+        assert_eq!(updated, vec!["AGENTS.md".to_string()]);
+        let content = fs::read_to_string(base.join("AGENTS.md")).unwrap();
+        assert!(!content.contains("old ctx guidance"));
+        assert!(content.contains("Use ctx new, ctx append, and ctx supersede"));
+        assert!(content.contains("## Other"));
+
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn finds_ctx_section_range() {
+        let content = "# Agents\n\n## ctx\n\ntext\n\n## Other\n\nx\n";
+        let (start, end) = find_ctx_section_range(content).unwrap();
+        assert_eq!(&content[start..end], "## ctx\n\ntext\n\n");
     }
 
     #[test]
