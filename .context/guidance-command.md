@@ -24,4 +24,4 @@ ctx guidance --add updates any AGENTS.md files in the repo with the same protoco
 
 ### guidance-command
 
-The guidance now also states that managed context should be detailed enough for a later agent to act without another interview. In practice that means capturing decisions, assumptions, constraints, tradeoffs, and concrete examples when they matter, rather than leaving only high-level summaries.
+The guidance now includes a concrete authoring rubric for detail. It tells agents to prefer semantic coverage over verbosity and, for each concern, to record the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded. It also tells them to add concrete examples only when those examples remove ambiguity and to avoid overfitting context to incidental implementation details that will churn quickly.

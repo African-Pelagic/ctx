@@ -75,7 +75,11 @@ fn guidance_text() -> &'static str {
 - Do not directly edit .context documents except for recovery or repair work.
 - Use ctx assemble before relevant work.
 - Use ctx new, ctx append, and ctx supersede for context updates.
-- Capture context in enough detail that a later agent can act without another interview; include decisions, assumptions, constraints, tradeoffs, and concrete examples when they matter.
+- Capture enough detail that a later agent can act without another interview.
+- Prefer semantic coverage over verbosity.
+- For each concern, try to record: the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded.
+- Include decisions, assumptions, constraints, tradeoffs, and concrete examples when they remove ambiguity.
+- Do not overfit the context to incidental implementation details that will churn quickly.
 - Run ctx check after context changes.
 - Respect .contextignore when deciding what belongs in managed context.
 "
@@ -218,7 +222,9 @@ mod tests {
         let content = fs::read_to_string(base.join("AGENTS.md")).unwrap();
         assert!(content.contains("Do not directly edit .context documents"));
         assert!(content.contains("ctx assemble before relevant work"));
-        assert!(content.contains("Capture context in enough detail"));
+        assert!(content.contains("Capture enough detail that a later agent can act"));
+        assert!(content.contains("Prefer semantic coverage over verbosity"));
+        assert!(content.contains("what would cause it to be superseded"));
 
         fs::remove_dir_all(base).unwrap();
     }
