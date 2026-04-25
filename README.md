@@ -125,6 +125,14 @@ The intended workflow is:
 
 This is a better fit than asking humans to manage concern structure by hand in the middle of implementation work.
 
+The agent should also treat assembled context as something to evaluate, not just repeat. It should:
+
+- capture enough detail that a later agent can act without another interview
+- prefer semantic coverage over verbosity
+- record the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded
+- check for contradictions, unsatisfied prerequisites, stale assumptions, and mismatches between context and code
+- ask the operator before making an ambiguous semantic change
+
 ## Safety Boundary
 
 `.context/` is meant to be committed, so the repo can define a `.contextignore` file at the root.
@@ -234,6 +242,18 @@ Show the active concern roster, owners, files, and notes.
 
 Use it to inspect the current semantic state of the corpus.
 
+### `ctx guidance`
+
+Print the repo’s `ctx` usage protocol for humans and agents.
+
+Use it when:
+
+- an agent is new to the repo
+- you want a concise reminder of the `ctx` workflow
+- you want to refresh repo-level instructions
+
+`ctx guidance --add` updates any `AGENTS.md` files in the repo with the current `ctx` guidance block. If no `AGENTS.md` exists, it creates one at the repo root.
+
 ### `ctx assemble`
 
 Assemble current context from explicit predicates.
@@ -322,10 +342,14 @@ For agents:
 
 1. Run `ctx assemble` before changing code.
 2. Optionally run `ctx suggest --path` for discovery.
-3. Infer narrow concerns.
-4. Inspect the code before deciding supersession.
-5. Update the corpus through `ctx`.
-6. Run `ctx check`.
+3. Use `ctx guidance` if the repo workflow is unclear.
+4. Infer narrow concerns.
+5. Capture decisions, assumptions, constraints, tradeoffs, and examples when they remove ambiguity.
+6. Inspect the code before deciding supersession.
+7. Read context critically rather than passively.
+8. Ask the operator before making an ambiguous semantic change.
+9. Update the corpus through `ctx`.
+10. Run `ctx check`.
 
 For humans:
 
