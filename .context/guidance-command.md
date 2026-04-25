@@ -25,3 +25,11 @@ ctx guidance --add updates any AGENTS.md files in the repo with the same protoco
 ### guidance-command
 
 The guidance now includes a concrete authoring rubric for detail. It tells agents to prefer semantic coverage over verbosity and, for each concern, to record the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded. It also tells them to add concrete examples only when those examples remove ambiguity and to avoid overfitting context to incidental implementation details that will churn quickly.
+
+### guidance-command
+
+The guidance now also tells agents to read assembled context critically rather than passively. They should check for contradictions, unsatisfied prerequisites, stale assumptions, and mismatches between context and code, and treat any inconsistency as a signal to update or supersede context explicitly.
+
+### guidance-command
+
+The guidance now adds an explicit human-in-the-loop rule for ambiguous semantic changes. Agents should use their judgment for routine upkeep, but if the right semantic change is not clear from the code and current context, they should check with the operator before superseding, reframing, or otherwise changing the meaning of the corpus.

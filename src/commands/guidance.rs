@@ -80,6 +80,10 @@ fn guidance_text() -> &'static str {
 - For each concern, try to record: the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded.
 - Include decisions, assumptions, constraints, tradeoffs, and concrete examples when they remove ambiguity.
 - Do not overfit the context to incidental implementation details that will churn quickly.
+- Read assembled context critically, not passively.
+- Check for contradictions, unsatisfied prerequisites, stale assumptions, and mismatches between context and code.
+- If context is incomplete, inconsistent, or no longer true, update it or supersede it explicitly.
+- If the right semantic change is not clear from the code and current context, check with the operator before making the change.
 - Run ctx check after context changes.
 - Respect .contextignore when deciding what belongs in managed context.
 "
@@ -262,6 +266,9 @@ mod tests {
         assert!(content.contains("Capture enough detail that a later agent can act"));
         assert!(content.contains("Prefer semantic coverage over verbosity"));
         assert!(content.contains("what would cause it to be superseded"));
+        assert!(content.contains("Read assembled context critically, not passively"));
+        assert!(content.contains("contradictions, unsatisfied prerequisites"));
+        assert!(content.contains("check with the operator before making the change"));
 
         fs::remove_dir_all(base).unwrap();
     }

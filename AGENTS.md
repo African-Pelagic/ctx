@@ -12,6 +12,10 @@ ctx guidance
 - For each concern, try to record: the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded.
 - Include decisions, assumptions, constraints, tradeoffs, and concrete examples when they remove ambiguity.
 - Do not overfit the context to incidental implementation details that will churn quickly.
+- Read assembled context critically, not passively.
+- Check for contradictions, unsatisfied prerequisites, stale assumptions, and mismatches between context and code.
+- If context is incomplete, inconsistent, or no longer true, update it or supersede it explicitly.
+- If the right semantic change is not clear from the code and current context, check with the operator before making the change.
 - Run ctx check after context changes.
 - Respect .contextignore when deciding what belongs in managed context.
 <!-- ctx-guidance:end -->
