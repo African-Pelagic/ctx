@@ -1,23 +1,73 @@
 # ctx
 
-`ctx` manages workflow context for software development.
+`ctx` is a version-controlled, queryable decision layer for a codebase.
 
 It stores current engineering context in markdown files under `.context/`. Each file declares the concerns it owns, the code it applies to, and any newer files that supersede it.
 
-`ctx` is not a general knowledge base. It is for context that is close to implementation work and likely to change.
+`ctx` is not a general knowledge base. It is for context that is close to implementation work, likely to change, and worth keeping under version control beside the code.
+
+## Mental Model
+
+Git stores what changed.
+`ctx` stores why the change was reasonable at the time.
+
+Git history is a sequence of code states.
+`ctx` is a sequence of evolving engineering claims.
+
+Used together, they let a human or agent reconstruct both:
+
+- the code delta
+- the reasoning delta
+
+`ctx` does not require context for every commit. It enables Git-tracked decision recording alongside commits when the change is semantic, decision-bearing, or likely to matter later.
 
 ## Why This Exists
 
-Teams produce a lot of useful context while they build software:
+Git records what changed. It does not reliably record why the change was reasonable at the time.
+
+Teams produce a lot of useful decision context while they build software:
 
 - why a change exists
 - what assumptions are in force
 - what tradeoffs were made
 - what older understanding is no longer true
 
-That context rarely lives in one good place. It ends up in chat logs, branch notes, PR comments, scratch files, and people’s heads. In agentic workflows, the problem gets worse: multiple agents may read and write context, and stale notes can survive beside current ones with no explicit replacement record.
+That context rarely lives in one good place. It ends up in chat logs, branch notes, PR comments, scratch files, commit-message fragments, and people’s heads. In agentic workflows, the problem gets worse: multiple agents may read and write context, and stale notes can survive beside current ones with no explicit replacement record.
 
-`ctx` solves that by making workflow context a managed artifact.
+`ctx` solves that by making workflow context a managed artifact that can be tracked in Git alongside the code.
+
+Put simply:
+
+- Git records code state transitions.
+- `ctx` records the workflow and decision context around those transitions.
+
+`ctx` does not require context for every commit. It gives teams a way to keep decision-bearing context under version control when it matters.
+
+## What `ctx` Is Good At
+
+Three parts of the current model matter most.
+
+### Concern-level supersession
+
+This is the core differentiator.
+
+A document can stay current for one concern while being superseded for another. That gives you non-destructive semantic updates instead of overwrite-or-append-everything behavior.
+
+### Deterministic assembly
+
+`ctx` uses explicit concerns, scoped paths, scoped components, and supersession state. It does not depend on fuzzy retrieval or embeddings for its primary read path.
+
+That makes assembly:
+
+- predictable
+- testable
+- debuggable
+
+### Agent-first structure
+
+`ctx` works best as agent-operated infrastructure with a human-readable interface. Humans decide meaning. Agents do the mechanical upkeep.
+
+That is important because most teams will not maintain this structure manually at high frequency.
 
 ## What `ctx` Stores
 
@@ -39,6 +89,28 @@ The markdown body stays human-readable. The frontmatter gives the tool enough st
 - validate the corpus
 
 The markdown corpus is the source of truth. The registry and code index are derived files.
+
+## What `ctx` Eliminates
+
+`ctx` is useful because it removes a few recurring context failures in agent workflows.
+
+### Context loss across sessions
+
+Without `ctx`, context often lives in prompts, chats, and local notes. When sessions reset, humans or agents reconstruct it imperfectly.
+
+With `ctx`, context is externalized, versioned, and queryable. Sessions become stateless clients of a persistent corpus.
+
+### Summarisation decay
+
+Without `ctx`, long-lived work often depends on repeated compaction. Context is summarized to fit prompts, and subtle constraints disappear.
+
+With `ctx`, retrieval is selective rather than compressive. The original reasoning remains intact in the corpus.
+
+### Fragmented truth
+
+Without `ctx`, relevant reasoning is scattered across PRs, chats, tickets, docs, and agent logs.
+
+With `ctx`, workflow context has one structured corpus, explicit supersession, and deterministic assembly.
 
 ## What Counts As Workflow Context
 
@@ -64,6 +136,15 @@ Things that usually do not belong here:
 - onboarding material
 
 Those things matter, but they belong in other artifacts.
+
+The best fit for `ctx` is context around semantic changes:
+
+- why a feature was implemented this way
+- what constraint ruled out another approach
+- what changed in the current understanding of the work
+- what earlier context is now obsolete
+
+That is why `ctx` works well alongside commits without trying to replace Git history, ADRs, or ticket systems.
 
 ## Core Ideas
 
@@ -132,6 +213,31 @@ The agent should also treat assembled context as something to evaluate, not just
 - record the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded
 - check for contradictions, unsatisfied prerequisites, stale assumptions, and mismatches between context and code
 - ask the operator before making an ambiguous semantic change
+
+This separation is subtle but important:
+
+- `AGENTS.md` tells an agent how to behave
+- `ctx` tells an agent what is currently true about the system
+
+That keeps stable operating instructions separate from changing workflow state.
+
+## Why This Works For Agent Workflows
+
+Most agent workflows still treat context as something fragile and ephemeral. They stuff it into prompts, compress it, and restitch it across sessions.
+
+`ctx` supports a different loop:
+
+1. query the current state with explicit predicates
+2. act on that state
+3. update that state through structured documents
+
+In practice, that lets agents operate more like stateless executors:
+
+- `ctx assemble`
+- act
+- `ctx update` through `new`, `append`, or `supersede`
+
+That does not solve judgment automatically, but it does replace prompt-based context carrying with a persistent, queryable system.
 
 ## Safety Boundary
 
