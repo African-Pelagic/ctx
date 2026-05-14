@@ -1,7 +1,7 @@
 ---
 id: ctx-e55cf5
 created: 2026-04-22T19:41:24.647302135Z
-status: current
+status: partially-superseded
 concerns:
 - code-aware-indexing-extension
 - read-side-commands
@@ -17,7 +17,11 @@ scope:
   - src/index.rs
   components:
   - ctx-cli
-superseded_by: []
+superseded_by:
+- id: ctx-fbbc96
+  concerns:
+  - read-side-commands
+  - validation-rules
 ---
 ### read-side-commands
 

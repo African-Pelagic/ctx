@@ -217,6 +217,6 @@ mod tests {
             .args(args)
             .status()
             .unwrap();
-        assert!(status.success(), "git {:?} failed", args);
+        assert!(status.success(), "git {args:?} failed");
     }
 }

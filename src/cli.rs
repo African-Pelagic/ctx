@@ -33,6 +33,8 @@ pub enum Command {
     List,
     #[command(about = "Explain how agents and humans should use ctx in this repo")]
     Guidance(GuidanceArgs),
+    #[command(about = "Search context document bodies with active-only defaults")]
+    Search(SearchArgs),
     #[command(about = "Suggest likely relevant context from the derived code index")]
     Suggest(SuggestArgs),
     #[command(about = "Append body text to an existing document under an active concern")]
@@ -41,6 +43,8 @@ pub enum Command {
     Assemble(AssembleArgs),
     #[command(about = "Record concern-level supersession from one document to another")]
     Supersede(SupersedeArgs),
+    #[command(about = "Create a successor document for a stale concern")]
+    Refresh(RefreshArgs),
     #[command(about = "Rebuild the registry from .context markdown documents")]
     Sync,
     #[command(about = "Validate the context corpus and staged context changes")]
@@ -123,6 +127,21 @@ pub struct AssembleArgs {
 
     #[arg(long = "paths", help = "Emit only matching document paths")]
     pub paths_only: bool,
+
+    #[arg(long, help = "Explain why each assembled document was included")]
+    pub explain: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct SearchArgs {
+    #[arg(
+        long,
+        help = "Search for this literal string in context document bodies"
+    )]
+    pub query: String,
+
+    #[arg(long, help = "Include fully superseded documents in the search corpus")]
+    pub include_superseded: bool,
 }
 
 #[derive(Debug, Args)]
@@ -160,6 +179,27 @@ pub struct SupersedeArgs {
         help = "Replacement document ID that becomes the new owner"
     )]
     pub by_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct RefreshArgs {
+    #[arg(long, help = "Concern to refresh")]
+    pub concern: String,
+
+    #[arg(
+        long,
+        help = "Source document ID when the concern has multiple active owners"
+    )]
+    pub from: Option<String>,
+
+    #[arg(long, help = "New document name; .md is optional and will be stripped")]
+    pub name: String,
+
+    #[arg(
+        long,
+        help = "Seed the new document body with the old concern section as a draft"
+    )]
+    pub draft_body: bool,
 }
 
 #[derive(Debug, Args)]

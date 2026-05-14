@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use crate::{
     cli::CheckArgs,
-    document::{Frontmatter, parse_document},
+    document::{Frontmatter, concern_headings, parse_document},
     git::is_stale,
     ignore::ContextIgnore,
     index::CodeIndex,
@@ -31,6 +31,8 @@ struct Issue {
     file: String,
     message: String,
 }
+
+type ParsedDocument = (std::path::PathBuf, Frontmatter);
 
 pub fn run(args: CheckArgs, output_mode: OutputMode) -> Result<()> {
     let issues = collect_issues(Path::new("."), args.strict)?;
@@ -104,6 +106,8 @@ fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
         }
     }
 
+    issues.extend(body_drift_issues(&registry, strict)?);
+
     issues.extend(staged_diff_issues(base)?);
     issues.sort_by(|a, b| {
         a.file
@@ -111,6 +115,62 @@ fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
             .then(a.code.cmp(b.code))
             .then(a.message.cmp(&b.message))
     });
+    Ok(issues)
+}
+
+fn body_drift_issues(registry: &Registry, strict: bool) -> Result<Vec<Issue>> {
+    let superseded_ids = registry
+        .documents
+        .iter()
+        .filter_map(|(id, entry)| {
+            (entry.status == crate::document::Status::Superseded).then_some(id)
+        })
+        .collect::<Vec<_>>();
+    let mut issues = Vec::new();
+
+    for (id, entry) in &registry.documents {
+        if entry.status == crate::document::Status::Superseded {
+            continue;
+        }
+
+        let content = fs::read_to_string(&entry.file)
+            .with_context(|| format!("failed to read {}", entry.file))?;
+        let (_, body) = parse_document(&content)
+            .with_context(|| format!("failed to parse frontmatter in {}", entry.file))?;
+
+        if entry.status == crate::document::Status::Current {
+            for heading in concern_headings(&body) {
+                if !entry
+                    .active_concerns
+                    .iter()
+                    .any(|concern| concern == &heading)
+                {
+                    issues.push(Issue {
+                        severity: as_severity(strict),
+                        code: "INACTIVE_CONCERN_HEADING",
+                        file: entry.file.clone(),
+                        message: format!(
+                            "current document {id} contains a body section for non-active concern {heading}"
+                        ),
+                    });
+                }
+            }
+        }
+
+        for superseded_id in &superseded_ids {
+            if body.contains(superseded_id.as_str()) {
+                issues.push(Issue {
+                    severity: as_severity(strict),
+                    code: "SUPERSEDED_DOC_REFERENCE",
+                    file: entry.file.clone(),
+                    message: format!(
+                        "document {id} contains an advisory stale reference to fully superseded document {superseded_id}"
+                    ),
+                });
+            }
+        }
+    }
+
     Ok(issues)
 }
 
@@ -126,7 +186,7 @@ fn scan_frontmatter(
     base: &Path,
     context_dir: &Path,
     ignore: &ContextIgnore,
-) -> Result<(Vec<Issue>, Vec<(std::path::PathBuf, Frontmatter)>)> {
+) -> Result<(Vec<Issue>, Vec<ParsedDocument>)> {
     let mut issues = Vec::new();
     let mut docs = Vec::new();
     if !context_dir.exists() {
@@ -293,8 +353,8 @@ fn lcs_table<'a>(old_lines: &[&'a str], new_lines: &[&'a str]) -> Vec<Vec<usize>
     let mut table = vec![vec![0; new_lines.len() + 1]; old_lines.len() + 1];
 
     for i in 0..old_lines.len() {
-        for j in 0..new_lines.len() {
-            table[i + 1][j + 1] = if old_lines[i] == new_lines[j] {
+        for (j, new_line) in new_lines.iter().enumerate() {
+            table[i + 1][j + 1] = if old_lines[i] == *new_line {
                 table[i][j] + 1
             } else {
                 table[i + 1][j].max(table[i][j + 1])
@@ -574,6 +634,6 @@ mod tests {
             .args(args)
             .status()
             .unwrap();
-        assert!(status.success(), "git {:?} failed", args);
+        assert!(status.success(), "git {args:?} failed");
     }
 }

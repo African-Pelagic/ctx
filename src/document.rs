@@ -51,7 +51,7 @@ pub fn parse_document(content: &str) -> Result<(Frontmatter, String)> {
 
 pub fn write_document(frontmatter: &Frontmatter, body: &str) -> Result<String> {
     let yaml = serde_yaml::to_string(frontmatter)?;
-    Ok(format!("---\n{}---\n{}", yaml, body))
+    Ok(format!("---\n{yaml}---\n{body}"))
 }
 
 pub fn active_concerns(frontmatter: &Frontmatter) -> Vec<String> {
@@ -74,11 +74,48 @@ pub fn recompute_status(frontmatter: &mut Frontmatter) {
     }
 }
 
+pub fn concern_headings(body: &str) -> Vec<String> {
+    body.lines()
+        .filter_map(|line| line.strip_prefix("### "))
+        .map(str::trim)
+        .filter(|heading| !heading.is_empty())
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+pub fn extract_concern_section(body: &str, concern: &str) -> Option<String> {
+    let mut section_lines = Vec::new();
+    let mut in_section = false;
+    let heading = format!("### {concern}");
+
+    for line in body.lines() {
+        if line.trim_end() == heading {
+            in_section = true;
+            section_lines.push(line);
+            continue;
+        }
+
+        if in_section && line.starts_with("### ") {
+            break;
+        }
+
+        if in_section {
+            section_lines.push(line);
+        }
+    }
+
+    if !in_section {
+        return None;
+    }
+
+    Some(section_lines.join("\n").trim().to_string() + "\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document,
-        recompute_status, write_document,
+        Frontmatter, Scope, Status, SupersededBy, active_concerns, concern_headings,
+        extract_concern_section, parse_document, recompute_status, write_document,
     };
     use chrono::{TimeZone, Utc};
 
@@ -145,5 +182,23 @@ mod tests {
         });
         recompute_status(&mut frontmatter);
         assert_eq!(frontmatter.status, Status::Superseded);
+    }
+
+    #[test]
+    fn extracts_concern_headings() {
+        let body = "### billing\n\nnote\n\n### auth\n\nother\n";
+        assert_eq!(
+            concern_headings(body),
+            vec!["billing".to_string(), "auth".to_string()]
+        );
+    }
+
+    #[test]
+    fn extracts_specific_concern_section() {
+        let body = "### billing\n\nnote\n\n### auth\n\nother\n";
+        assert_eq!(
+            extract_concern_section(body, "billing"),
+            Some("### billing\n\nnote\n".to_string())
+        );
     }
 }

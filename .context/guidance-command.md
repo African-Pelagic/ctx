@@ -33,3 +33,9 @@ The guidance now also tells agents to read assembled context critically rather t
 ### guidance-command
 
 The guidance now adds an explicit human-in-the-loop rule for ambiguous semantic changes. Agents should use their judgment for routine upkeep, but if the right semantic change is not clear from the code and current context, they should check with the operator before superseding, reframing, or otherwise changing the meaning of the corpus.
+
+### guidance-command
+
+The repo guidance now explicitly treats ctx refresh as a first-class context-update path alongside new, append, and supersede. It also tells agents to prefer ctx assemble --explain when they need the fullest deterministic picture of why documents were assembled, and to use ctx search or ctx suggest for discovery when explicit assemble predicates are not enough.
+
+This keeps the guidance aligned with the newer read and refresh surface without turning the protocol block into full command reference material.

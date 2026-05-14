@@ -42,29 +42,30 @@ impl fmt::Display for ConflictError {
 impl Error for ConflictError {}
 
 pub fn run(args: NewArgs, output_mode: OutputMode) -> Result<()> {
-    match create_document(&args, Path::new(".")) {
-        Ok(()) => {}
+    let created = match create_document(&args, Path::new(".")) {
+        Ok(created) => created,
         Err(NewCommandError::Conflicts(conflicts)) => {
             emit_conflicts(&conflicts, output_mode)?;
             process::exit(3);
         }
         Err(NewCommandError::Fatal(err)) => return Err(err),
-    }
+    };
 
     match output_mode {
         OutputMode::Human => {
-            println!("Created {}", output_path(&args.name).display());
+            println!("Created {} ({})", created.file.display(), created.id);
         }
         OutputMode::Json => {
             println!(
                 "{}",
                 serde_json::to_string_pretty(&serde_json::json!({
-                    "file": output_path(&args.name),
+                    "id": created.id,
+                    "file": created.file,
                 }))?
             );
         }
         OutputMode::Porcelain => {
-            println!("{}", output_path(&args.name).display());
+            println!("{}\t{}", created.id, created.file.display());
         }
     }
 
@@ -76,14 +77,23 @@ enum NewCommandError {
     Conflicts(Vec<Conflict>),
 }
 
-fn create_document(args: &NewArgs, base: &Path) -> std::result::Result<(), NewCommandError> {
+#[derive(Debug)]
+struct CreatedDocument {
+    id: String,
+    file: PathBuf,
+}
+
+fn create_document(
+    args: &NewArgs,
+    base: &Path,
+) -> std::result::Result<CreatedDocument, NewCommandError> {
     create_document_inner(args, base).map_err(|err| match err.downcast::<ConflictError>() {
         Ok(conflicts) => NewCommandError::Conflicts(conflicts.0),
         Err(other) => NewCommandError::Fatal(other),
     })
 }
 
-fn create_document_inner(args: &NewArgs, base: &Path) -> Result<()> {
+fn create_document_inner(args: &NewArgs, base: &Path) -> Result<CreatedDocument> {
     if !args.non_interactive {
         if !io::stdin().is_terminal() {
             bail!("interactive mode requires a TTY; use --non-interactive");
@@ -131,10 +141,13 @@ fn create_document_inner(args: &NewArgs, base: &Path) -> Result<()> {
         .with_context(|| format!("failed to write {}", file_path.display()))?;
 
     sync_corpus_from(base)?;
-    Ok(())
+    Ok(CreatedDocument {
+        id: frontmatter.id,
+        file: file_path,
+    })
 }
 
-fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<()> {
+fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<CreatedDocument> {
     let theme = ColorfulTheme::default();
     let name = normalize_name(&args.name);
     let file_path = context_dir_from(base).join(format!("{name}.md"));
@@ -224,11 +237,10 @@ fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<()> {
     }
 
     sync_corpus_from(base)?;
-    Ok(())
-}
-
-fn output_path(name: &str) -> PathBuf {
-    PathBuf::from(".context").join(format!("{}.md", normalize_name(name)))
+    Ok(CreatedDocument {
+        id: frontmatter.id,
+        file: file_path,
+    })
 }
 
 fn normalize_name(name: &str) -> String {
@@ -343,7 +355,7 @@ fn apply_supersession(
     let source_entry = registry
         .documents
         .get(source_id)
-        .with_context(|| format!("document {} not found", source_id))?;
+        .with_context(|| format!("document {source_id} not found"))?;
     let source_path = base.join(&source_entry.file);
     let content = fs::read_to_string(&source_path)
         .with_context(|| format!("failed to read {}", source_path.display()))?;

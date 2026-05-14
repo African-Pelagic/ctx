@@ -7,6 +7,8 @@ mod index;
 mod init;
 mod list;
 mod new;
+mod refresh;
+mod search;
 mod suggest;
 mod supersede;
 mod sync;
@@ -22,10 +24,12 @@ pub fn run(command: Command, output_mode: OutputMode) -> Result<()> {
         Command::Index => index::run(output_mode),
         Command::List => list::run(output_mode),
         Command::Guidance(args) => guidance::run(args, output_mode),
+        Command::Search(args) => search::run(args, output_mode),
         Command::Suggest(args) => suggest::run(args, output_mode),
         Command::Append(args) => append::run(args, output_mode),
         Command::Assemble(args) => assemble::run(args, output_mode),
         Command::Supersede(args) => supersede::run(args, output_mode),
+        Command::Refresh(args) => refresh::run(args, output_mode),
         Command::Sync => sync::run(output_mode),
         Command::Check(args) => check::run(args, output_mode),
         Command::Gc => gc::run(output_mode),

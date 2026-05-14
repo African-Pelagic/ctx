@@ -73,8 +73,9 @@ fn guidance_text() -> &'static str {
 
 - .context/ is managed by ctx.
 - Do not directly edit .context documents except for recovery or repair work.
-- Use ctx assemble before relevant work.
-- Use ctx new, ctx append, and ctx supersede for context updates.
+- Use ctx assemble before relevant work, and prefer ctx assemble --explain when you need the fullest deterministic picture of why documents are in scope.
+- Use ctx search or ctx suggest for discovery when explicit assemble predicates are not enough.
+- Use ctx new, ctx append, ctx supersede, and ctx refresh for context updates.
 - Capture enough detail that a later agent can act without another interview.
 - Prefer semantic coverage over verbosity.
 - For each concern, try to record: the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded.
@@ -216,11 +217,10 @@ fn upsert_guidance_block(path: &Path, block: &str) -> Result<()> {
 }
 
 fn find_ctx_section_range(content: &str) -> Option<(usize, usize)> {
-    let start = content.find("\n## ctx\n").map(|idx| idx + 1).or_else(|| {
-        content
-            .strip_prefix("## ctx\n")
-            .map(|_| 0)
-    })?;
+    let start = content
+        .find("\n## ctx\n")
+        .map(|idx| idx + 1)
+        .or_else(|| content.strip_prefix("## ctx\n").map(|_| 0))?;
 
     let rest = &content[start + "## ctx\n".len()..];
     let end = rest
@@ -288,7 +288,8 @@ mod tests {
 
         assert_eq!(updated, vec!["docs/AGENTS.md".to_string()]);
         let content = fs::read_to_string(nested.join("AGENTS.md")).unwrap();
-        assert!(content.contains("Use ctx new, ctx append, and ctx supersede"));
+        assert!(content.contains("Use ctx new, ctx append, ctx supersede, and ctx refresh"));
+        assert!(content.contains("prefer ctx assemble --explain"));
         assert!(!content.contains("\nold\n"));
 
         fs::remove_dir_all(base).unwrap();
@@ -309,7 +310,8 @@ mod tests {
         assert_eq!(updated, vec!["AGENTS.md".to_string()]);
         let content = fs::read_to_string(base.join("AGENTS.md")).unwrap();
         assert!(!content.contains("old ctx guidance"));
-        assert!(content.contains("Use ctx new, ctx append, and ctx supersede"));
+        assert!(content.contains("Use ctx new, ctx append, ctx supersede, and ctx refresh"));
+        assert!(content.contains("Use ctx search or ctx suggest for discovery"));
         assert!(content.contains("## Other"));
 
         fs::remove_dir_all(base).unwrap();

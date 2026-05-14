@@ -40,11 +40,11 @@ pub fn print_error_and_exit(output_mode: OutputMode, error: &anyhow::Error) -> !
             let payload = serde_json::to_string_pretty(&ErrorPayload {
                 error: &error.to_string(),
             })
-            .unwrap_or_else(|_| format!("{{\"error\":\"{}\"}}", error));
+            .unwrap_or_else(|_| format!("{{\"error\":\"{error}\"}}"));
             eprintln!("{payload}");
         }
         OutputMode::Porcelain => {
-            eprintln!("error {}", error);
+            eprintln!("error {error}");
         }
     }
 

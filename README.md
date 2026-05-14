@@ -1,279 +1,147 @@
 # ctx
 
-`ctx` is a version-controlled, queryable decision layer for a codebase.
+`ctx` is a CLI for keeping workflow context in Git beside the code it explains.
 
-It stores current engineering context in markdown files under `.context/`. Each file declares the concerns it owns, the code it applies to, and any newer files that supersede it.
+It gives humans and agents a shared way to store current engineering claims, scope them to code, and supersede stale context explicitly instead of letting it pile up in chats, scratch notes, and prompts.
 
-`ctx` is not a general knowledge base. It is for context that is close to implementation work, likely to change, and worth keeping under version control beside the code.
+## Status
 
-## Mental Model
+`ctx` is usable now, but it is still early and evolving. The current focus is a deterministic read path, concern-level supersession, and agent-friendly write workflows.
 
-Git stores what changed.
-`ctx` stores why the change was reasonable at the time.
+## Why It Exists
 
-Git history is a sequence of code states.
-`ctx` is a sequence of evolving engineering claims.
+Git tells you what changed.
+`ctx` tells you why that change was reasonable at the time.
 
-Used together, they let a human or agent reconstruct both:
+That matters most when:
 
-- the code delta
-- the reasoning delta
+- work spans many sessions
+- multiple agents touch the same stream of work
+- assumptions and tradeoffs change over time
+- old notes are dangerous if they remain visible as if they were still current
 
-`ctx` does not require context for every commit. It enables Git-tracked decision recording alongside commits when the change is semantic, decision-bearing, or likely to matter later.
+`ctx` handles that by treating workflow context as a managed artifact:
 
-## Why This Exists
+- markdown documents under `.context/`
+- explicit concerns owned by each document
+- explicit scope via repo paths and components
+- explicit concern-level supersession
+- deterministic assembly instead of fuzzy retrieval for the primary read path
 
-Git records what changed. It does not reliably record why the change was reasonable at the time.
-
-Teams produce a lot of useful decision context while they build software:
-
-- why a change exists
-- what assumptions are in force
-- what tradeoffs were made
-- what older understanding is no longer true
-
-That context rarely lives in one good place. It ends up in chat logs, branch notes, PR comments, scratch files, commit-message fragments, and people’s heads. In agentic workflows, the problem gets worse: multiple agents may read and write context, and stale notes can survive beside current ones with no explicit replacement record.
-
-`ctx` solves that by making workflow context a managed artifact that can be tracked in Git alongside the code.
-
-Put simply:
-
-- Git records code state transitions.
-- `ctx` records the workflow and decision context around those transitions.
-
-`ctx` does not require context for every commit. It gives teams a way to keep decision-bearing context under version control when it matters.
-
-## What `ctx` Is Good At
-
-Three parts of the current model matter most.
+## What Makes It Different
 
 ### Concern-level supersession
 
-This is the core differentiator.
-
-A document can stay current for one concern while being superseded for another. That gives you non-destructive semantic updates instead of overwrite-or-append-everything behavior.
+One document can stay current for one concern while being superseded for another. That lets context evolve without destructive rewriting or endless additive notes.
 
 ### Deterministic assembly
 
-`ctx` uses explicit concerns, scoped paths, scoped components, and supersession state. It does not depend on fuzzy retrieval or embeddings for its primary read path.
+`ctx assemble` uses explicit concerns, paths, components, and supersession state. The main read path is predictable, testable, and debuggable.
 
-That makes assembly:
+### Built for agent workflows
 
-- predictable
-- testable
-- debuggable
+The structure is human-readable, but the upkeep is agent-friendly. Humans decide meaning. Agents can do the mechanical work of assembling, appending, refreshing, and superseding context.
 
-### Agent-first structure
+## Quickstart
 
-`ctx` works best as agent-operated infrastructure with a human-readable interface. Humans decide meaning. Agents do the mechanical upkeep.
-
-That is important because most teams will not maintain this structure manually at high frequency.
-
-## What `ctx` Stores
-
-Each `.context/*.md` document has YAML frontmatter with:
-
-- `id`
-- `created`
-- `status`
-- `concerns`
-- `scope.paths`
-- `scope.components`
-- `superseded_by`
-
-The markdown body stays human-readable. The frontmatter gives the tool enough structure to:
-
-- assemble relevant context deterministically
-- track current concern ownership
-- record concern-level supersession
-- validate the corpus
-
-The markdown corpus is the source of truth. The registry and code index are derived files.
-
-## What `ctx` Eliminates
-
-`ctx` is useful because it removes a few recurring context failures in agent workflows.
-
-### Context loss across sessions
-
-Without `ctx`, context often lives in prompts, chats, and local notes. When sessions reset, humans or agents reconstruct it imperfectly.
-
-With `ctx`, context is externalized, versioned, and queryable. Sessions become stateless clients of a persistent corpus.
-
-### Summarisation decay
-
-Without `ctx`, long-lived work often depends on repeated compaction. Context is summarized to fit prompts, and subtle constraints disappear.
-
-With `ctx`, retrieval is selective rather than compressive. The original reasoning remains intact in the corpus.
-
-### Fragmented truth
-
-Without `ctx`, relevant reasoning is scattered across PRs, chats, tickets, docs, and agent logs.
-
-With `ctx`, workflow context has one structured corpus, explicit supersession, and deterministic assembly.
-
-## What Counts As Workflow Context
-
-Good workflow context is short-to-medium-lived engineering context that helps someone change code correctly now.
-
-Typical examples:
-
-- current implementation strategy for a feature
-- migration constraints
-- rollout assumptions
-- debugging findings
-- temporary invariants
-- deferred tradeoffs that still affect the work
-
-Things that usually do not belong here:
-
-- company mission
-- product vision
-- roadmap narratives
-- tickets and epics
-- broad architecture guidance
-- coding standards
-- onboarding material
-
-Those things matter, but they belong in other artifacts.
-
-The best fit for `ctx` is context around semantic changes:
-
-- why a feature was implemented this way
-- what constraint ruled out another approach
-- what changed in the current understanding of the work
-- what earlier context is now obsolete
-
-That is why `ctx` works well alongside commits without trying to replace Git history, ADRs, or ticket systems.
-
-## Core Ideas
-
-### Concerns
-
-A concern is a named workflow claim.
-
-Examples:
-
-- `document-lifecycle`
-- `validation-rules`
-- `cli-help-surface`
-- `supersession-decision-procedure`
-
-Think of concerns as versionable engineering assertions, not broad categories like `frontend` or `architecture`.
-
-The main authoring rule is:
-
-Group concerns that are likely to be superseded together.
-
-That rule is hard for humans to follow consistently during normal work. For that reason, `ctx` works best when agents do most of the mechanical upkeep and humans stay focused on judgment.
-
-### Scope
-
-Each document declares the code it applies to:
-
-- `paths` for path globs
-- `components` for stable component labels
-
-This lets `ctx` assemble context from explicit metadata instead of fuzzy retrieval.
-
-### Supersession
-
-Supersession is explicit and concern-level.
-
-A document can stay current for one concern while being superseded for another. `ctx` computes active concerns from `concerns` minus any concerns named in `superseded_by`.
-
-The tool records supersession. Humans and agents decide it.
-
-The practical test is simple:
-
-If you assemble this concern tomorrow, should both documents still appear as current?
-
-- If yes, keep additive ownership.
-- If no, supersede the older concern explicitly.
-
-That judgment should use the old document, the new document, and the current code.
-
-## Humans and Agents
-
-`ctx` is designed for human and agent collaboration, but it is best treated as agent-operated infrastructure with a human-readable interface.
-
-The intended workflow is:
-
-1. A human and agent discuss the work.
-2. They decide what is true, what changed, and what should remain current.
-3. The agent updates `.context/` through `ctx`.
-4. The human reviews when needed.
-
-This is a better fit than asking humans to manage concern structure by hand in the middle of implementation work.
-
-The agent should also treat assembled context as something to evaluate, not just repeat. It should:
-
-- capture enough detail that a later agent can act without another interview
-- prefer semantic coverage over verbosity
-- record the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded
-- check for contradictions, unsatisfied prerequisites, stale assumptions, and mismatches between context and code
-- ask the operator before making an ambiguous semantic change
-
-This separation is subtle but important:
-
-- `AGENTS.md` tells an agent how to behave
-- `ctx` tells an agent what is currently true about the system
-
-That keeps stable operating instructions separate from changing workflow state.
-
-## Why This Works For Agent Workflows
-
-Most agent workflows still treat context as something fragile and ephemeral. They stuff it into prompts, compress it, and restitch it across sessions.
-
-`ctx` supports a different loop:
-
-1. query the current state with explicit predicates
-2. act on that state
-3. update that state through structured documents
-
-In practice, that lets agents operate more like stateless executors:
-
-- `ctx assemble`
-- act
-- `ctx update` through `new`, `append`, or `supersede`
-
-That does not solve judgment automatically, but it does replace prompt-based context carrying with a persistent, queryable system.
-
-## Safety Boundary
-
-`.context/` is meant to be committed, so the repo can define a `.contextignore` file at the root.
-
-`ctx` uses `.contextignore` to:
-
-- exclude matching `.context/*.md` files from the managed corpus
-- exclude matching repo paths from the derived code index
-- reject new documents that scope ignored paths
-
-Example:
-
-```text
-secrets/**
-*.tfstate
-*.tfstate.*
-*.hcl
-.context/private-*.md
-```
-
-Important: `.contextignore` excludes files and paths. It does not redact secrets written directly into markdown text.
-
-## Installation
+Install from the repo:
 
 ```bash
-cargo install --path .
+cargo install --git https://github.com/African-Pelagic/ctx.git
 ```
 
-For local development:
+Or for local development:
 
 ```bash
 cargo run -- --help
 ```
 
-## Document Shape
+Minimal flow:
+
+```bash
+ctx init
+ctx new auth-token-expiry --concerns token-expiry --paths src/auth.rs --non-interactive
+ctx assemble --concern token-expiry --explain
+```
+
+## Demo Walkthrough
+
+This is the shortest credible story to show in a terminal demo:
+
+1. A repo already has multiple context documents.
+2. You assemble context for one part of the codebase.
+3. You discover an assumption is stale.
+4. You create or refresh a successor document.
+5. You re-assemble and show the new current truth.
+6. You run `ctx check` to prove the corpus is still coherent.
+
+### Placeholder: terminal demo video
+
+Add a short GIF or asciinema link here.
+
+Suggested placement:
+
+```md
+[![Terminal demo placeholder](docs/placeholders/demo-still.png)](REPLACE_WITH_DEMO_URL)
+```
+
+### Placeholder: sample demo transcript
+
+```text
+$ ctx assemble --path src/auth.rs --explain
+# ctx-a1b2c3 - .context/auth-rollout.md
+Active concerns: token-expiry, session-invalidation
+Included because: path src/auth.rs
+
+$ ctx refresh --concern token-expiry --name token-expiry-refresh --draft-body
+created .context/token-expiry-refresh.md
+superseded token-expiry on ctx-a1b2c3
+
+$ ctx check
+Context corpus is clean.
+```
+
+## Core Commands
+
+### `ctx init`
+
+Initializes `.context/` and the derived registry in the current repository.
+
+### `ctx new`
+
+Creates a new context document and assigns concerns, scope paths, and optional components.
+
+### `ctx assemble`
+
+Builds the relevant context set from explicit predicates:
+
+- `--path`
+- `--component`
+- `--concern`
+
+Use `--explain` to show why each document was included.
+
+### `ctx search`
+
+Searches context bodies for literal text. By default it searches current and partially superseded documents and ignores fully superseded ones.
+
+### `ctx append`
+
+Adds text under an existing active concern when the current owner is still correct and you only need to record more detail.
+
+### `ctx supersede`
+
+Marks one document as replacing another for specific concerns.
+
+### `ctx refresh`
+
+Creates a successor document for a stale concern while carrying forward scope metadata and recording supersession in the same workflow.
+
+### `ctx check`
+
+Validates the corpus and warns on deterministic drift signals such as missing scoped paths or references to fully superseded documents.
+
+## Example Document Shape
 
 ```md
 ---
@@ -300,172 +168,59 @@ Notes about validation behavior.
 Notes about read-side behavior.
 ```
 
-## Command Guide
+## When To Use It
 
-### `ctx init`
+`ctx` is a good fit when the work is large enough that prompt-carried context starts to rot:
 
-Initialize `.context/` and the derived registry in the current repo.
+- feature work that spans days or weeks
+- migrations
+- multi-step refactors
+- rollout coordination
+- investigations where findings change what is true
+- any agent-heavy workflow where stale notes are expensive
 
-Use it when you adopt `ctx` in a project.
+It is much less useful for tiny one-shot changes where the cost of maintaining context is higher than the value of preserving it.
 
-### `ctx new`
+## Safety Boundary
 
-Create a new context document.
+`.context/` is intended to be committed, so `ctx` supports a root `.contextignore` file.
 
-Use it when you have a new workflow claim to record.
+It uses `.contextignore` to:
 
-Important flags:
-
-- `--concerns`
-- `--paths`
-- `--components`
-- `--non-interactive`
-- `--append`
-
-Use `--append` only when overlap with an existing owner is deliberate and both documents should remain current.
-
-### `ctx append`
-
-Append body text to an existing document under one of its active concerns.
-
-Use it when the document is still the right owner and you only need to add detail.
-
-### `ctx supersede`
-
-Record that one document replaces another for one or more concerns.
-
-Use it when an older operational claim is no longer current.
-
-### `ctx sync`
-
-Rebuild the derived registry from the markdown corpus.
-
-Use it after direct recovery or repair work on `.context/`.
-
-### `ctx list`
-
-Show the active concern roster, owners, files, and notes.
-
-Use it to inspect the current semantic state of the corpus.
-
-### `ctx guidance`
-
-Print the repo’s `ctx` usage protocol for humans and agents.
-
-Use it when:
-
-- an agent is new to the repo
-- you want a concise reminder of the `ctx` workflow
-- you want to refresh repo-level instructions
-
-`ctx guidance --add` updates any `AGENTS.md` files in the repo with the current `ctx` guidance block. If no `AGENTS.md` exists, it creates one at the repo root.
-
-### `ctx assemble`
-
-Assemble current context from explicit predicates.
-
-Predicates:
-
-- `--path`
-- `--component`
-- `--concern`
-
-You can supply multiple concerns with repeated flags or comma-separated values. Concern matching uses OR semantics.
-
-Examples:
-
-```bash
-ctx assemble --component ctx-cli
-ctx assemble --path 'src/commands/*.rs' --paths
-ctx assemble --concern read-side-commands --concern validation-rules
-```
-
-`assemble` includes current and partially superseded documents, and excludes fully superseded documents.
-
-### `ctx check`
-
-Validate the context corpus and staged `.context` changes.
-
-It checks:
-
-- invalid frontmatter
-- orphaned concerns
-- stale documents
-- multi-owned concerns
-- append-only violations
-- managed frontmatter tampering
-- missing scoped paths
-
-Use `--strict` to treat warning-class issues as errors.
-
-### `ctx gc`
-
-List fully superseded documents that are candidates for cleanup.
-
-It reports cleanup candidates but does not delete anything.
-
-### `ctx index`
-
-Build or refresh the derived code index in `.context/.index.json`.
-
-Use it when you want fresh path-based advisory data.
-
-### `ctx suggest`
-
-Suggest likely relevant context for a repo path using the derived code index.
+- exclude matching `.context/*.md` files from the managed corpus
+- exclude matching repo paths from the derived code index
+- reject new documents that scope ignored paths
 
 Example:
 
-```bash
-ctx suggest --path src/cli.rs
+```text
+secrets/**
+*.tfstate
+*.tfstate.*
+*.hcl
+.context/private-*.md
 ```
 
-This command is advisory. It does not replace deterministic assembly.
+Important: `.contextignore` excludes files and paths. It does not redact secrets written directly into markdown text.
 
-## When To Use Which Write Command
-
-Use `ctx new` when:
-
-- this is a new workflow claim
-- you want a new document to own or co-own concerns
-
-Use `ctx append` when:
-
-- the document already owns the concern
-- you are adding more text, not changing ownership
-
-Use `ctx new --append` when:
-
-- a new document should deliberately co-own a concern
-
-Use `ctx supersede` when:
-
-- the new document replaces the older operational truth
-
-## Recommended Workflow
-
-For agents:
+## Recommended Agent Workflow
 
 1. Run `ctx assemble` before changing code.
-2. Optionally run `ctx suggest --path` for discovery.
-3. Use `ctx guidance` if the repo workflow is unclear.
-4. Infer narrow concerns.
-5. Capture decisions, assumptions, constraints, tradeoffs, and examples when they remove ambiguity.
-6. Inspect the code before deciding supersession.
-7. Read context critically rather than passively.
-8. Ask the operator before making an ambiguous semantic change.
-9. Update the corpus through `ctx`.
-10. Run `ctx check`.
+2. Use `ctx search` or `ctx suggest` when explicit assembly predicates are not enough.
+3. Inspect the code, not just the context.
+4. Capture decisions, assumptions, constraints, tradeoffs, and concrete examples when they remove ambiguity.
+5. Use `ctx new`, `ctx append`, `ctx supersede`, or `ctx refresh` to keep the corpus current.
+6. Run `ctx check`.
 
-For humans:
+## LinkedIn / Launch Assets
 
-1. Discuss the work with the agent.
-2. Decide what changed and what remains true.
-3. Let the agent update the corpus.
-4. Review the result when needed.
+Useful assets to add before posting publicly:
 
-## Bottom Line
+- terminal demo video: `REPLACE_WITH_DEMO_URL`
+- architecture diagram: `REPLACE_WITH_DIAGRAM_PATH`
+- sample repo walkthrough: `REPLACE_WITH_EXAMPLE_REPO_URL`
+- crates.io release link if published: `REPLACE_WITH_CRATES_URL`
 
-`ctx` gives workflow context a durable structure.
+## License
 
-It keeps current claims separate from superseded ones, makes assembly predictable, and gives humans and agents a shared way to maintain context as the code changes.
+GPL-3.0-only. See [LICENSE](LICENSE).

@@ -226,7 +226,7 @@ mod tests {
 
     fn write_doc(path: &Path, frontmatter: &Frontmatter) {
         let yaml = serde_yaml::to_string(frontmatter).unwrap();
-        fs::write(path, format!("---\n{}---\nbody\n", yaml)).unwrap();
+        fs::write(path, format!("---\n{yaml}---\nbody\n")).unwrap();
     }
 
     #[test]

@@ -45,16 +45,26 @@ fn supersede_document(args: &SupersedeArgs, base: &Path) -> Result<()> {
         .documents
         .get(&args.id)
         .with_context(|| format!("document {} not found", args.id))?;
-    let _replacement_entry = registry
+    let replacement_entry = registry
         .documents
         .get(&args.by_id)
         .with_context(|| format!("replacement document {} not found", args.by_id))?;
 
     let source_path = base.join(&source_entry.file);
+    let replacement_path = base.join(&replacement_entry.file);
     let content = fs::read_to_string(&source_path)
         .with_context(|| format!("failed to read {}", source_path.display()))?;
     let (mut frontmatter, body) = parse_document(&content)
         .with_context(|| format!("failed to parse frontmatter in {}", source_path.display()))?;
+    let replacement_content = fs::read_to_string(&replacement_path)
+        .with_context(|| format!("failed to read {}", replacement_path.display()))?;
+    let (mut replacement_frontmatter, replacement_body) = parse_document(&replacement_content)
+        .with_context(|| {
+            format!(
+                "failed to parse frontmatter in {}",
+                replacement_path.display()
+            )
+        })?;
 
     let active = active_concerns(&frontmatter);
     for concern in &concerns {
@@ -67,23 +77,47 @@ fn supersede_document(args: &SupersedeArgs, base: &Path) -> Result<()> {
         }
     }
 
+    let replacement_active = active_concerns(&replacement_frontmatter);
+    for concern in &concerns {
+        if replacement_frontmatter.concerns.contains(concern)
+            && !replacement_active.contains(concern)
+        {
+            bail!(
+                "concern {} is already superseded in replacement document {}",
+                concern,
+                replacement_frontmatter.id
+            );
+        }
+    }
+
+    replacement_frontmatter
+        .concerns
+        .extend(concerns.iter().cloned());
+    replacement_frontmatter.concerns.sort();
+    replacement_frontmatter.concerns.dedup();
+    recompute_status(&mut replacement_frontmatter);
+
     if let Some(existing) = frontmatter
         .superseded_by
         .iter_mut()
         .find(|entry| entry.id == args.by_id)
     {
-        existing.concerns.extend(concerns);
+        existing.concerns.extend(concerns.clone());
         existing.concerns.sort();
         existing.concerns.dedup();
     } else {
         frontmatter.superseded_by.push(SupersededBy {
             id: args.by_id.clone(),
-            concerns,
+            concerns: concerns.clone(),
         });
         frontmatter.superseded_by.sort_by(|a, b| a.id.cmp(&b.id));
     }
 
     recompute_status(&mut frontmatter);
+
+    let updated_replacement = write_document(&replacement_frontmatter, &replacement_body)?;
+    fs::write(&replacement_path, updated_replacement)
+        .with_context(|| format!("failed to write {}", replacement_path.display()))?;
 
     let updated = write_document(&frontmatter, &body)?;
     fs::write(&source_path, updated)
@@ -231,6 +265,8 @@ mod tests {
         assert!(written.contains("id: ctx-replacement"));
         assert!(written.contains("- token-expiry"));
         assert!(written.contains("status: partially-superseded"));
+        let replacement = fs::read_to_string(base.join(".context/replacement.md")).unwrap();
+        assert!(replacement.contains("concerns:\n- token-expiry"));
 
         fs::remove_dir_all(base).unwrap();
     }
@@ -250,6 +286,40 @@ mod tests {
 
         let written = fs::read_to_string(base.join(".context/source.md")).unwrap();
         assert!(written.contains("status: superseded"));
+
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn adds_missing_concern_to_replacement_document() {
+        let base = unique_temp_dir();
+        seed_corpus(&base);
+
+        let replacement = Frontmatter {
+            id: "ctx-replacement".into(),
+            created: Utc.with_ymd_and_hms(2025, 10, 15, 14, 24, 0).unwrap(),
+            status: Status::Current,
+            concerns: vec!["billing-auth".into()],
+            scope: Scope::default(),
+            superseded_by: vec![],
+        };
+        write_doc(
+            &base.join(".context/replacement.md"),
+            &replacement,
+            "replacement body\n",
+        );
+
+        let args = SupersedeArgs {
+            id: "ctx-source".into(),
+            concerns: vec!["token-expiry".into()],
+            by_id: "ctx-replacement".into(),
+        };
+
+        supersede_document(&args, &base).unwrap();
+
+        let replacement = fs::read_to_string(base.join(".context/replacement.md")).unwrap();
+        assert!(replacement.contains("- billing-auth"));
+        assert!(replacement.contains("- token-expiry"));
 
         fs::remove_dir_all(base).unwrap();
     }

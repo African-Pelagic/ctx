@@ -7,11 +7,19 @@ use serde::Serialize;
 use crate::{cli::AssembleArgs, document::Status, output::OutputMode, registry::load_or_sync};
 
 #[derive(Debug, Serialize)]
+struct InclusionReason {
+    kind: &'static str,
+    requested: String,
+    matched: String,
+}
+
+#[derive(Debug, Serialize)]
 struct AssembledDocument {
     id: String,
     file: String,
     active_concerns: Vec<String>,
     matched_concerns: Vec<String>,
+    reasons: Vec<InclusionReason>,
     content: String,
 }
 
@@ -34,6 +42,9 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
                     println!("Active concerns: {}", doc.active_concerns.join(", "));
                     if !doc.matched_concerns.is_empty() {
                         println!("Matched concerns: {}", doc.matched_concerns.join(", "));
+                    }
+                    if args.explain && !doc.reasons.is_empty() {
+                        println!("Included because: {}", format_reasons(&doc.reasons));
                     }
                     if !doc.content.trim().is_empty() {
                         println!();
@@ -60,13 +71,24 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
                 }
             } else {
                 for doc in &docs {
-                    println!(
-                        "{}\t{}\t{}\t{}",
-                        doc.id,
-                        doc.file,
-                        doc.active_concerns.join(","),
-                        doc.matched_concerns.join(",")
-                    );
+                    if args.explain {
+                        println!(
+                            "{}\t{}\t{}\t{}\t{}",
+                            doc.id,
+                            doc.file,
+                            doc.active_concerns.join(","),
+                            doc.matched_concerns.join(","),
+                            serde_json::to_string(&doc.reasons)?
+                        );
+                    } else {
+                        println!(
+                            "{}\t{}\t{}\t{}",
+                            doc.id,
+                            doc.file,
+                            doc.active_concerns.join(","),
+                            doc.matched_concerns.join(",")
+                        );
+                    }
                 }
             }
         }
@@ -97,16 +119,31 @@ fn select_documents(
             continue;
         }
 
-        let path_match = compiled_path
-            .as_ref()
-            .map(|pattern| entry.scope.paths.iter().any(|scope| pattern.matches(scope)))
-            .unwrap_or(false);
+        let mut reasons = Vec::new();
 
-        let component_match = args
-            .component
-            .as_ref()
-            .map(|component| entry.scope.components.iter().any(|item| item == component))
-            .unwrap_or(false);
+        if let (Some(requested_path), Some(pattern)) = (&args.path, compiled_path.as_ref()) {
+            for scope_path in &entry.scope.paths {
+                if pattern.matches(scope_path) {
+                    reasons.push(InclusionReason {
+                        kind: "path-match",
+                        requested: requested_path.clone(),
+                        matched: scope_path.clone(),
+                    });
+                }
+            }
+        }
+
+        if let Some(component) = &args.component {
+            for item in &entry.scope.components {
+                if item == component {
+                    reasons.push(InclusionReason {
+                        kind: "component-match",
+                        requested: component.clone(),
+                        matched: item.clone(),
+                    });
+                }
+            }
+        }
 
         let mut matched_concerns = args
             .concern
@@ -116,9 +153,15 @@ fn select_documents(
             .collect::<Vec<_>>();
         matched_concerns.sort();
         matched_concerns.dedup();
-        let concern_match = !matched_concerns.is_empty();
+        for concern in &matched_concerns {
+            reasons.push(InclusionReason {
+                kind: "concern-match",
+                requested: concern.clone(),
+                matched: concern.clone(),
+            });
+        }
 
-        if !(path_match || component_match || concern_match) {
+        if reasons.is_empty() {
             continue;
         }
 
@@ -131,6 +174,7 @@ fn select_documents(
             file: entry.file.clone(),
             active_concerns: entry.active_concerns.clone(),
             matched_concerns,
+            reasons,
             content: body,
         });
     }
@@ -148,11 +192,24 @@ fn strip_frontmatter(content: &str) -> String {
     content.to_string()
 }
 
+fn format_reasons(reasons: &[InclusionReason]) -> String {
+    reasons
+        .iter()
+        .map(|reason| match reason.kind {
+            "concern-match" => format!("concern {}", reason.matched),
+            "component-match" => format!("component {}", reason.matched),
+            "path-match" => format!("path {}", reason.matched),
+            _ => format!("{} {}", reason.kind, reason.matched),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
 
-    use super::{select_documents, strip_frontmatter};
+    use super::{InclusionReason, format_reasons, select_documents, strip_frontmatter};
     use crate::{
         cli::AssembleArgs,
         document::Status,
@@ -198,12 +255,14 @@ mod tests {
             component: Some("billing-service".into()),
             concern: vec![],
             paths_only: false,
+            explain: false,
         };
 
         let docs = select_documents(&registry, &args).unwrap();
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].id, "ctx-a");
         assert!(docs[0].matched_concerns.is_empty());
+        assert_eq!(docs[0].reasons.len(), 1);
     }
 
     #[test]
@@ -250,6 +309,7 @@ mod tests {
             component: None,
             concern: vec!["billing".into(), "sessions".into()],
             paths_only: false,
+            explain: false,
         };
 
         let docs = select_documents(&registry, &args).unwrap();
@@ -258,5 +318,26 @@ mod tests {
         assert_eq!(docs[0].matched_concerns, vec!["billing".to_string()]);
         assert_eq!(docs[1].id, "ctx-b");
         assert_eq!(docs[1].matched_concerns, vec!["sessions".to_string()]);
+    }
+
+    #[test]
+    fn formats_explain_reasons() {
+        let reasons = vec![
+            InclusionReason {
+                kind: "concern-match",
+                requested: "billing".into(),
+                matched: "billing".into(),
+            },
+            InclusionReason {
+                kind: "path-match",
+                requested: "src/**".into(),
+                matched: "src/billing/**".into(),
+            },
+        ];
+
+        assert_eq!(
+            format_reasons(&reasons),
+            "concern billing, path src/billing/**"
+        );
     }
 }

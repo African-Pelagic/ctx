@@ -5,8 +5,9 @@ ctx guidance
 
 - .context/ is managed by ctx.
 - Do not directly edit .context documents except for recovery or repair work.
-- Use ctx assemble before relevant work.
-- Use ctx new, ctx append, and ctx supersede for context updates.
+- Use ctx assemble before relevant work, and prefer ctx assemble --explain when you need the fullest deterministic picture of why documents are in scope.
+- Use ctx search or ctx suggest for discovery when explicit assemble predicates are not enough.
+- Use ctx new, ctx append, ctx supersede, and ctx refresh for context updates.
 - Capture enough detail that a later agent can act without another interview.
 - Prefer semantic coverage over verbosity.
 - For each concern, try to record: the current claim, why it is true, what it depends on, what it excludes, and what would cause it to be superseded.
