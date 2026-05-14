@@ -64,42 +64,6 @@ ctx new auth-token-expiry --concerns token-expiry --paths src/auth.rs --non-inte
 ctx assemble --concern token-expiry --explain
 ```
 
-## Demo Walkthrough
-
-This is the shortest credible story to show in a terminal demo:
-
-1. A repo already has multiple context documents.
-2. You assemble context for one part of the codebase.
-3. You discover an assumption is stale.
-4. You create or refresh a successor document.
-5. You re-assemble and show the new current truth.
-6. You run `ctx check` to prove the corpus is still coherent.
-
-### Placeholder: terminal demo video
-
-Add a short GIF or asciinema link here.
-
-Suggested placement:
-
-```md
-[![Terminal demo placeholder](docs/placeholders/demo-still.png)](REPLACE_WITH_DEMO_URL)
-```
-
-### Placeholder: sample demo transcript
-
-```text
-$ ctx assemble --path src/auth.rs --explain
-# ctx-a1b2c3 - .context/auth-rollout.md
-Active concerns: token-expiry, session-invalidation
-Included because: path src/auth.rs
-
-$ ctx refresh --concern token-expiry --name token-expiry-refresh --draft-body
-created .context/token-expiry-refresh.md
-superseded token-expiry on ctx-a1b2c3
-
-$ ctx check
-Context corpus is clean.
-```
 
 ## Core Commands
 
@@ -212,14 +176,6 @@ Important: `.contextignore` excludes files and paths. It does not redact secrets
 5. Use `ctx new`, `ctx append`, `ctx supersede`, or `ctx refresh` to keep the corpus current.
 6. Run `ctx check`.
 
-## LinkedIn / Launch Assets
-
-Useful assets to add before posting publicly:
-
-- terminal demo video: `REPLACE_WITH_DEMO_URL`
-- architecture diagram: `REPLACE_WITH_DIAGRAM_PATH`
-- sample repo walkthrough: `REPLACE_WITH_EXAMPLE_REPO_URL`
-- crates.io release link if published: `REPLACE_WITH_CRATES_URL`
 
 ## License
 
