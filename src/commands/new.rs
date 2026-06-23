@@ -14,8 +14,8 @@ use serde::Serialize;
 use crate::{
     cli::NewArgs,
     document::{
-        Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document,
-        recompute_status, write_document,
+        Frontmatter, Scope, Status, SupersededBy, active_concerns, format_ranked_concern_block,
+        parse_document, recompute_status, validate_rank, write_document,
     },
     git::repo_files,
     id::generate_id,
@@ -105,6 +105,7 @@ fn create_document_inner(args: &NewArgs, base: &Path) -> Result<CreatedDocument>
     if concerns.is_empty() {
         bail!("--concerns is required in --non-interactive mode");
     }
+    let body = build_initial_body(args, &concerns)?;
     let paths = normalize_values(&args.paths);
     validate_scope_paths(base, &paths)?;
 
@@ -136,7 +137,7 @@ fn create_document_inner(args: &NewArgs, base: &Path) -> Result<CreatedDocument>
         superseded_by: Vec::new(),
     };
 
-    let content = write_document(&frontmatter, "")?;
+    let content = write_document(&frontmatter, &body)?;
     fs::write(&file_path, content)
         .with_context(|| format!("failed to write {}", file_path.display()))?;
 
@@ -165,6 +166,7 @@ fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<CreatedDoc
     if concerns.is_empty() {
         bail!("at least one concern is required");
     }
+    let body = build_initial_body(args, &concerns)?;
 
     let paths = if args.paths.is_empty() {
         let value = Input::<String>::with_theme(&theme)
@@ -202,7 +204,7 @@ fn create_document_interactive(args: &NewArgs, base: &Path) -> Result<CreatedDoc
 
     fs::create_dir_all(context_dir_from(base))
         .with_context(|| format!("failed to create {}", context_dir_from(base).display()))?;
-    let content = write_document(&frontmatter, "")?;
+    let content = write_document(&frontmatter, &body)?;
     fs::write(&file_path, content)
         .with_context(|| format!("failed to write {}", file_path.display()))?;
 
@@ -264,6 +266,24 @@ fn normalize_values(values: &[String]) -> Vec<String> {
     normalized.sort();
     normalized.dedup();
     normalized
+}
+
+fn build_initial_body(args: &NewArgs, concerns: &[String]) -> Result<String> {
+    match (args.text.as_deref(), args.rank) {
+        (Some(text), Some(rank)) => {
+            if text.trim().is_empty() {
+                bail!("--text must not be empty");
+            }
+            if concerns.len() != 1 {
+                bail!("--text currently requires exactly one concern");
+            }
+            validate_rank(rank)?;
+            Ok(format_ranked_concern_block(&concerns[0], text, rank))
+        }
+        (Some(_), None) => bail!("--rank is required when --text is provided"),
+        (None, Some(_)) => bail!("--rank requires --text"),
+        (None, None) => Ok(String::new()),
+    }
 }
 
 fn validate_scope_paths(base: &Path, scope_paths: &[String]) -> Result<()> {
@@ -400,7 +420,10 @@ mod tests {
 
     use chrono::{TimeZone, Utc};
 
-    use super::{create_document_inner, detect_conflicts, normalize_name, normalize_values};
+    use super::{
+        build_initial_body, create_document_inner, detect_conflicts, normalize_name,
+        normalize_values,
+    };
     use crate::{
         cli::NewArgs,
         document::{Frontmatter, Scope, Status, write_document},
@@ -483,6 +506,8 @@ mod tests {
             concerns: vec!["billing".into()],
             paths: vec!["src/billing/**".into()],
             components: vec!["billing-service".into()],
+            text: None,
+            rank: None,
         };
 
         create_document_inner(&args, &base).unwrap();
@@ -508,6 +533,8 @@ mod tests {
             concerns: vec!["billing".into()],
             paths: vec![],
             components: vec![],
+            text: None,
+            rank: None,
         };
 
         let err = create_document_inner(&args, &base).unwrap_err();
@@ -528,6 +555,8 @@ mod tests {
             concerns: vec!["billing".into()],
             paths: vec![],
             components: vec![],
+            text: None,
+            rank: None,
         };
 
         create_document_inner(&args, &base).unwrap();
@@ -554,6 +583,8 @@ mod tests {
             concerns: vec!["billing".into()],
             paths: vec!["secrets/**".into()],
             components: vec![],
+            text: None,
+            rank: None,
         };
 
         let err = create_document_inner(&args, &base).unwrap_err();
@@ -561,6 +592,85 @@ mod tests {
             err.to_string()
                 .contains("scope paths blocked by .contextignore")
         );
+
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn creates_ranked_initial_body_when_text_is_provided() {
+        let args = NewArgs {
+            name: "billing-notes".into(),
+            non_interactive: true,
+            append: false,
+            concerns: vec!["billing".into()],
+            paths: vec![],
+            components: vec![],
+            text: Some("Capture the current billing edge case.".into()),
+            rank: Some(5),
+        };
+
+        let body = build_initial_body(&args, &["billing".into()]).unwrap();
+        assert_eq!(
+            body,
+            "### billing [r5]\n\nCapture the current billing edge case.\n"
+        );
+    }
+
+    #[test]
+    fn rejects_text_without_rank() {
+        let args = NewArgs {
+            name: "billing-notes".into(),
+            non_interactive: true,
+            append: false,
+            concerns: vec!["billing".into()],
+            paths: vec![],
+            components: vec![],
+            text: Some("Body".into()),
+            rank: None,
+        };
+
+        let err = build_initial_body(&args, &["billing".into()]).unwrap_err();
+        assert!(err.to_string().contains("--rank is required"));
+    }
+
+    #[test]
+    fn rejects_text_for_multiple_concerns() {
+        let args = NewArgs {
+            name: "billing-notes".into(),
+            non_interactive: true,
+            append: false,
+            concerns: vec!["billing".into(), "auth".into()],
+            paths: vec![],
+            components: vec![],
+            text: Some("Body".into()),
+            rank: Some(2),
+        };
+
+        let err = build_initial_body(&args, &["auth".into(), "billing".into()]).unwrap_err();
+        assert!(err.to_string().contains("exactly one concern"));
+    }
+
+    #[test]
+    fn writes_ranked_initial_body_into_new_document() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(base.join(".context")).unwrap();
+
+        let args = NewArgs {
+            name: "billing-notes.md".into(),
+            non_interactive: true,
+            append: false,
+            concerns: vec!["billing".into()],
+            paths: vec!["src/billing/**".into()],
+            components: vec!["billing-service".into()],
+            text: Some("Initial context for billing.".into()),
+            rank: Some(4),
+        };
+
+        create_document_inner(&args, &base).unwrap();
+
+        let content = fs::read_to_string(base.join(".context/billing-notes.md")).unwrap();
+        assert!(content.contains("### billing [r4]"));
+        assert!(content.contains("Initial context for billing."));
 
         fs::remove_dir_all(base).unwrap();
     }

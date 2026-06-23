@@ -6,7 +6,10 @@ use std::{
 use anyhow::{Context, Result};
 use serde::Serialize;
 
-use crate::{cli::GuidanceArgs, output::OutputMode};
+use crate::{
+    cli::{GuidanceArgs, render_help_dump},
+    output::OutputMode,
+};
 
 const START_MARKER: &str = "<!-- ctx-guidance:start -->";
 const END_MARKER: &str = "<!-- ctx-guidance:end -->";
@@ -18,9 +21,9 @@ struct GuidancePayload<'a> {
 }
 
 pub fn run(args: GuidanceArgs, output_mode: OutputMode) -> Result<()> {
-    let guidance = guidance_text();
+    let guidance = full_guidance_text();
     let updated_files = if args.add {
-        upsert_agents_files(Path::new("."), guidance)?
+        upsert_agents_files(Path::new("."), &guidance)?
     } else {
         Vec::new()
     };
@@ -47,7 +50,7 @@ pub fn run(args: GuidanceArgs, output_mode: OutputMode) -> Result<()> {
             println!(
                 "{}",
                 serde_json::to_string_pretty(&GuidancePayload {
-                    guidance,
+                    guidance: &guidance,
                     updated_files,
                 })?
             );
@@ -73,7 +76,9 @@ fn guidance_text() -> &'static str {
 
 - .context/ is managed by ctx.
 - Do not directly edit .context documents except for recovery or repair work.
-- Use ctx assemble before relevant work, and prefer ctx assemble --explain when you need the fullest deterministic picture of why documents are in scope.
+- Use ctx assemble before relevant work. With no predicates, it assembles the active corpus by default; use explicit predicates when you want a narrower slice.
+- Prefer ctx assemble --explain when you need the fullest deterministic picture of why documents are in scope.
+- ctx assemble accepts repeated --path flags when multiple repo paths matter.
 - Use ctx search or ctx suggest for discovery when explicit assemble predicates are not enough.
 - Use ctx new, ctx append, ctx supersede, and ctx refresh for context updates.
 - Capture enough detail that a later agent can act without another interview.
@@ -88,6 +93,14 @@ fn guidance_text() -> &'static str {
 - Run ctx check after context changes.
 - Respect .contextignore when deciding what belongs in managed context.
 "
+}
+
+fn full_guidance_text() -> String {
+    format!(
+        "{}\n## cli help\n\n{}\n",
+        guidance_text().trim_end(),
+        render_help_dump()
+    )
 }
 
 fn upsert_agents_files(base: &Path, guidance: &str) -> Result<Vec<String>> {
@@ -240,7 +253,7 @@ mod tests {
     };
 
     use super::{
-        find_agents_files, find_ctx_section_range, guidance_block, guidance_text,
+        find_agents_files, find_ctx_section_range, full_guidance_text, guidance_block,
         upsert_agents_files,
     };
 
@@ -257,18 +270,19 @@ mod tests {
         let base = unique_temp_dir();
         fs::create_dir_all(&base).unwrap();
 
-        let updated = upsert_agents_files(&base, guidance_text()).unwrap();
+        let updated = upsert_agents_files(&base, &full_guidance_text()).unwrap();
 
         assert_eq!(updated, vec!["AGENTS.md".to_string()]);
         let content = fs::read_to_string(base.join("AGENTS.md")).unwrap();
         assert!(content.contains("Do not directly edit .context documents"));
-        assert!(content.contains("ctx assemble before relevant work"));
+        assert!(content.contains("With no predicates, it assembles the active corpus by default"));
         assert!(content.contains("Capture enough detail that a later agent can act"));
         assert!(content.contains("Prefer semantic coverage over verbosity"));
         assert!(content.contains("what would cause it to be superseded"));
         assert!(content.contains("Read assembled context critically, not passively"));
         assert!(content.contains("contradictions, unsatisfied prerequisites"));
         assert!(content.contains("check with the operator before making the change"));
+        assert!(content.contains("# ctx assemble --help"));
 
         fs::remove_dir_all(base).unwrap();
     }
@@ -284,12 +298,12 @@ mod tests {
         )
         .unwrap();
 
-        let updated = upsert_agents_files(&base, guidance_text()).unwrap();
+        let updated = upsert_agents_files(&base, &full_guidance_text()).unwrap();
 
         assert_eq!(updated, vec!["docs/AGENTS.md".to_string()]);
         let content = fs::read_to_string(nested.join("AGENTS.md")).unwrap();
         assert!(content.contains("Use ctx new, ctx append, ctx supersede, and ctx refresh"));
-        assert!(content.contains("prefer ctx assemble --explain"));
+        assert!(content.contains("Prefer ctx assemble --explain"));
         assert!(!content.contains("\nold\n"));
 
         fs::remove_dir_all(base).unwrap();
@@ -305,7 +319,7 @@ mod tests {
         )
         .unwrap();
 
-        let updated = upsert_agents_files(&base, guidance_text()).unwrap();
+        let updated = upsert_agents_files(&base, &full_guidance_text()).unwrap();
 
         assert_eq!(updated, vec!["AGENTS.md".to_string()]);
         let content = fs::read_to_string(base.join("AGENTS.md")).unwrap();
@@ -328,12 +342,24 @@ mod tests {
     fn finds_agents_files_recursively() {
         let base = unique_temp_dir();
         fs::create_dir_all(base.join("a/b")).unwrap();
-        fs::write(base.join("a/b/AGENTS.md"), guidance_block(guidance_text())).unwrap();
+        fs::write(
+            base.join("a/b/AGENTS.md"),
+            guidance_block(&full_guidance_text()),
+        )
+        .unwrap();
 
         let files = find_agents_files(&base).unwrap();
         assert_eq!(files.len(), 1);
         assert!(files[0].ends_with("a/b/AGENTS.md"));
 
         fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn includes_cli_help_dump() {
+        let guidance = full_guidance_text();
+        assert!(guidance.contains("# ctx --help"));
+        assert!(guidance.contains("# ctx assemble --help"));
+        assert!(guidance.contains("# ctx guidance --help"));
     }
 }

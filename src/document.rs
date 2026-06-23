@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -75,21 +75,56 @@ pub fn recompute_status(frontmatter: &mut Frontmatter) {
 }
 
 pub fn concern_headings(body: &str) -> Vec<String> {
-    body.lines()
-        .filter_map(|line| line.strip_prefix("### "))
-        .map(str::trim)
-        .filter(|heading| !heading.is_empty())
-        .map(ToOwned::to_owned)
-        .collect()
+    body.lines().filter_map(parse_concern_heading).collect()
+}
+
+pub fn validate_rank(rank: u8) -> Result<()> {
+    if (1..=5).contains(&rank) {
+        Ok(())
+    } else {
+        bail!("rank must be between 1 and 5 inclusive");
+    }
+}
+
+pub fn format_ranked_concern_block(concern: &str, text: &str, rank: u8) -> String {
+    let mut out = String::new();
+    out.push_str("### ");
+    out.push_str(concern);
+    out.push_str(" [r");
+    out.push_str(&rank.to_string());
+    out.push(']');
+    out.push_str("\n\n");
+    out.push_str(text.trim());
+    out.push('\n');
+    out
+}
+
+pub fn parse_concern_heading(line: &str) -> Option<String> {
+    let heading = line.strip_prefix("### ")?;
+    let heading = heading.trim();
+    if heading.is_empty() {
+        return None;
+    }
+
+    let mut concern = heading;
+    while let Some((prefix, suffix)) = concern.rsplit_once(" [") {
+        if suffix.ends_with(']') {
+            concern = prefix.trim_end();
+        } else {
+            break;
+        }
+    }
+
+    let concern = concern.trim();
+    (!concern.is_empty()).then(|| concern.to_string())
 }
 
 pub fn extract_concern_section(body: &str, concern: &str) -> Option<String> {
     let mut section_lines = Vec::new();
     let mut in_section = false;
-    let heading = format!("### {concern}");
 
     for line in body.lines() {
-        if line.trim_end() == heading {
+        if parse_concern_heading(line).as_deref() == Some(concern) {
             in_section = true;
             section_lines.push(line);
             continue;
@@ -115,7 +150,8 @@ pub fn extract_concern_section(body: &str, concern: &str) -> Option<String> {
 mod tests {
     use super::{
         Frontmatter, Scope, Status, SupersededBy, active_concerns, concern_headings,
-        extract_concern_section, parse_document, recompute_status, write_document,
+        extract_concern_section, format_ranked_concern_block, parse_concern_heading,
+        parse_document, recompute_status, validate_rank, write_document,
     };
     use chrono::{TimeZone, Utc};
 
@@ -186,7 +222,7 @@ mod tests {
 
     #[test]
     fn extracts_concern_headings() {
-        let body = "### billing\n\nnote\n\n### auth\n\nother\n";
+        let body = "### billing [r2]\n\nnote\n\n### auth [n7] [r4]\n\nother\n";
         assert_eq!(
             concern_headings(body),
             vec!["billing".to_string(), "auth".to_string()]
@@ -195,10 +231,38 @@ mod tests {
 
     #[test]
     fn extracts_specific_concern_section() {
-        let body = "### billing\n\nnote\n\n### auth\n\nother\n";
+        let body = "### billing [r3]\n\nnote\n\n### auth [r2]\n\nother\n";
         assert_eq!(
             extract_concern_section(body, "billing"),
-            Some("### billing\n\nnote\n".to_string())
+            Some("### billing [r3]\n\nnote\n".to_string())
+        );
+    }
+
+    #[test]
+    fn validates_rank_range() {
+        assert!(validate_rank(1).is_ok());
+        assert!(validate_rank(5).is_ok());
+        assert!(validate_rank(0).is_err());
+        assert!(validate_rank(6).is_err());
+    }
+
+    #[test]
+    fn formats_ranked_concern_block() {
+        assert_eq!(
+            format_ranked_concern_block("billing", "New note", 4),
+            "### billing [r4]\n\nNew note\n"
+        );
+    }
+
+    #[test]
+    fn parses_heading_metadata_suffixes() {
+        assert_eq!(
+            parse_concern_heading("### billing [r4]"),
+            Some("billing".to_string())
+        );
+        assert_eq!(
+            parse_concern_heading("### billing rules [n7] [r4]"),
+            Some("billing rules".to_string())
         );
     }
 }

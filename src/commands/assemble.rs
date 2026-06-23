@@ -1,6 +1,6 @@
 use std::fs;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use glob::Pattern;
 use serde::Serialize;
 
@@ -101,17 +101,13 @@ fn select_documents(
     registry: &crate::registry::Registry,
     args: &AssembleArgs,
 ) -> Result<Vec<AssembledDocument>> {
-    let has_predicate = args.path.is_some() || args.component.is_some() || !args.concern.is_empty();
-    if !has_predicate {
-        bail!("at least one of --path, --component, or --concern is required");
-    }
-
-    let compiled_path = match &args.path {
-        Some(path) => {
-            Some(Pattern::new(path).with_context(|| format!("invalid path pattern {path}"))?)
-        }
-        None => None,
-    };
+    let compiled_paths = args
+        .path
+        .iter()
+        .map(|path| Pattern::new(path).with_context(|| format!("invalid path pattern {path}")))
+        .collect::<Result<Vec<_>>>()?;
+    let has_predicate =
+        !compiled_paths.is_empty() || args.component.is_some() || !args.concern.is_empty();
 
     let mut docs = Vec::new();
     for (id, entry) in &registry.documents {
@@ -121,7 +117,7 @@ fn select_documents(
 
         let mut reasons = Vec::new();
 
-        if let (Some(requested_path), Some(pattern)) = (&args.path, compiled_path.as_ref()) {
+        for (requested_path, pattern) in args.path.iter().zip(compiled_paths.iter()) {
             for scope_path in &entry.scope.paths {
                 if pattern.matches(scope_path) {
                     reasons.push(InclusionReason {
@@ -158,6 +154,14 @@ fn select_documents(
                 kind: "concern-match",
                 requested: concern.clone(),
                 matched: concern.clone(),
+            });
+        }
+
+        if !has_predicate {
+            reasons.push(InclusionReason {
+                kind: "default-active",
+                requested: "active-corpus".to_string(),
+                matched: "active-corpus".to_string(),
             });
         }
 
@@ -199,6 +203,7 @@ fn format_reasons(reasons: &[InclusionReason]) -> String {
             "concern-match" => format!("concern {}", reason.matched),
             "component-match" => format!("component {}", reason.matched),
             "path-match" => format!("path {}", reason.matched),
+            "default-active" => "default active corpus".to_string(),
             _ => format!("{} {}", reason.kind, reason.matched),
         })
         .collect::<Vec<_>>()
@@ -251,7 +256,7 @@ mod tests {
         };
 
         let args = AssembleArgs {
-            path: None,
+            path: vec![],
             component: Some("billing-service".into()),
             concern: vec![],
             paths_only: false,
@@ -305,7 +310,7 @@ mod tests {
         };
 
         let args = AssembleArgs {
-            path: None,
+            path: vec![],
             component: None,
             concern: vec!["billing".into(), "sessions".into()],
             paths_only: false,
@@ -339,5 +344,116 @@ mod tests {
             format_reasons(&reasons),
             "concern billing, path src/billing/**"
         );
+    }
+
+    #[test]
+    fn selects_all_active_documents_when_no_predicates_are_given() {
+        let registry = Registry {
+            schema_version: 1,
+            generated_at: Utc::now(),
+            generated_from_commit: None,
+            documents: [
+                (
+                    "ctx-a".to_string(),
+                    DocumentEntry {
+                        file: "Cargo.toml".into(),
+                        created: Utc::now(),
+                        status: Status::Current,
+                        concerns: vec!["billing".into()],
+                        active_concerns: vec!["billing".into()],
+                        scope: crate::document::Scope::default(),
+                        superseded_by: vec![],
+                    },
+                ),
+                (
+                    "ctx-b".to_string(),
+                    DocumentEntry {
+                        file: "README.md".into(),
+                        created: Utc::now(),
+                        status: Status::Superseded,
+                        concerns: vec!["auth".into()],
+                        active_concerns: vec![],
+                        scope: crate::document::Scope::default(),
+                        superseded_by: vec![],
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            concern_roster: Default::default(),
+            orphaned_concerns: vec![],
+            multi_owned_concerns: vec![],
+        };
+
+        let args = AssembleArgs {
+            path: vec![],
+            component: None,
+            concern: vec![],
+            paths_only: false,
+            explain: true,
+        };
+
+        let docs = select_documents(&registry, &args).unwrap();
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0].id, "ctx-a");
+        assert_eq!(docs[0].reasons.len(), 1);
+        assert_eq!(docs[0].reasons[0].kind, "default-active");
+    }
+
+    #[test]
+    fn selects_documents_matching_any_requested_path() {
+        let registry = Registry {
+            schema_version: 1,
+            generated_at: Utc::now(),
+            generated_from_commit: None,
+            documents: [
+                (
+                    "ctx-a".to_string(),
+                    DocumentEntry {
+                        file: "Cargo.toml".into(),
+                        created: Utc::now(),
+                        status: Status::Current,
+                        concerns: vec!["billing".into()],
+                        active_concerns: vec!["billing".into()],
+                        scope: crate::document::Scope {
+                            paths: vec!["src/billing/**".into()],
+                            components: vec![],
+                        },
+                        superseded_by: vec![],
+                    },
+                ),
+                (
+                    "ctx-b".to_string(),
+                    DocumentEntry {
+                        file: "README.md".into(),
+                        created: Utc::now(),
+                        status: Status::Current,
+                        concerns: vec!["auth".into()],
+                        active_concerns: vec!["auth".into()],
+                        scope: crate::document::Scope {
+                            paths: vec!["src/auth/**".into()],
+                            components: vec![],
+                        },
+                        superseded_by: vec![],
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            concern_roster: Default::default(),
+            orphaned_concerns: vec![],
+            multi_owned_concerns: vec![],
+        };
+
+        let args = AssembleArgs {
+            path: vec!["src/billing/**".into(), "src/auth/**".into()],
+            component: None,
+            concern: vec![],
+            paths_only: false,
+            explain: false,
+        };
+
+        let docs = select_documents(&registry, &args).unwrap();
+        assert_eq!(docs.len(), 2);
     }
 }

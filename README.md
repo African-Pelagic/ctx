@@ -36,7 +36,7 @@ One document can stay current for one concern while being superseded for another
 
 ### Deterministic assembly
 
-`ctx assemble` uses explicit concerns, paths, components, and supersession state. The main read path is predictable, testable, and debuggable.
+`ctx assemble` defaults to the active corpus and can be narrowed with explicit concerns, paths, and components. The main read path is predictable, testable, and debuggable.
 
 ### Built for agent workflows
 
@@ -61,7 +61,16 @@ Minimal flow:
 ```bash
 ctx init
 ctx new auth-token-expiry --concerns token-expiry --paths src/auth.rs --non-interactive
+ctx assemble --explain
 ctx assemble --concern token-expiry --explain
+```
+
+If you create a document with initial body text or append new context, provide a rank from `1` to `5`:
+
+```bash
+ctx new auth-token-expiry --concerns token-expiry --paths src/auth.rs --non-interactive --text "Auth tokens expire after 15 minutes." --rank 4
+ctx append ctx-123abc --concern token-expiry --text "Mobile clients still assume 30 minutes." --rank 3
+ctx backfill-ranks --default-rank 3
 ```
 
 
@@ -74,14 +83,17 @@ Initializes `.context/` and the derived registry in the current repository.
 ### `ctx new`
 
 Creates a new context document and assigns concerns, scope paths, and optional components.
+When `--text` is used, `--rank` is required.
 
 ### `ctx assemble`
 
-Builds the relevant context set from explicit predicates:
+Builds the active context set by default, or a narrower set from explicit predicates:
 
 - `--path`
 - `--component`
 - `--concern`
+
+`--path` may be repeated.
 
 Use `--explain` to show why each document was included.
 
@@ -92,6 +104,12 @@ Searches context bodies for literal text. By default it searches current and par
 ### `ctx append`
 
 Adds text under an existing active concern when the current owner is still correct and you only need to record more detail.
+`--rank` is required.
+
+### `ctx backfill-ranks`
+
+Rewrites existing `###` concern headings to carry rank metadata inline as `[rN]`.
+Legacy `Rank: N` lines are folded into the heading, and unranked headings receive `--default-rank`.
 
 ### `ctx supersede`
 
@@ -123,11 +141,11 @@ scope:
     - ctx-cli
 superseded_by: []
 ---
-### validation-rules
+### validation-rules [r4]
 
 Notes about validation behavior.
 
-### read-side-commands
+### read-side-commands [r3]
 
 Notes about read-side behavior.
 ```

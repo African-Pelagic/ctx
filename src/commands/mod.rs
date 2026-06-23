@@ -1,5 +1,6 @@
 mod append;
 mod assemble;
+mod backfill_ranks;
 mod check;
 mod gc;
 mod guidance;
@@ -27,6 +28,7 @@ pub fn run(command: Command, output_mode: OutputMode) -> Result<()> {
         Command::Search(args) => search::run(args, output_mode),
         Command::Suggest(args) => suggest::run(args, output_mode),
         Command::Append(args) => append::run(args, output_mode),
+        Command::BackfillRanks(args) => backfill_ranks::run(args, output_mode),
         Command::Assemble(args) => assemble::run(args, output_mode),
         Command::Supersede(args) => supersede::run(args, output_mode),
         Command::Refresh(args) => refresh::run(args, output_mode),

@@ -4,7 +4,9 @@ use anyhow::{Context, Result, bail};
 
 use crate::{
     cli::AppendArgs,
-    document::{active_concerns, parse_document, write_document},
+    document::{
+        active_concerns, format_ranked_concern_block, parse_document, validate_rank, write_document,
+    },
     output::OutputMode,
     registry::{load_or_sync_from, sync_corpus_from},
 };
@@ -34,6 +36,8 @@ pub fn run(args: AppendArgs, output_mode: OutputMode) -> Result<()> {
 }
 
 fn append_to_document(args: &AppendArgs, base: &Path) -> Result<()> {
+    validate_rank(args.rank)?;
+
     let registry = load_or_sync_from(base)?;
     let entry = registry
         .documents
@@ -55,7 +59,7 @@ fn append_to_document(args: &AppendArgs, base: &Path) -> Result<()> {
         );
     }
 
-    let updated_body = append_block(&body, &args.concern, &args.text);
+    let updated_body = append_block(&body, &args.concern, &args.text, args.rank);
     let updated = write_document(&frontmatter, &updated_body)?;
     fs::write(&file_path, updated)
         .with_context(|| format!("failed to write {}", file_path.display()))?;
@@ -64,16 +68,12 @@ fn append_to_document(args: &AppendArgs, base: &Path) -> Result<()> {
     Ok(())
 }
 
-fn append_block(body: &str, concern: &str, text: &str) -> String {
+fn append_block(body: &str, concern: &str, text: &str, rank: u8) -> String {
     let mut out = body.trim_end_matches('\n').to_string();
     if !out.is_empty() {
         out.push_str("\n\n");
     }
-    out.push_str("### ");
-    out.push_str(concern);
-    out.push_str("\n\n");
-    out.push_str(text.trim());
-    out.push('\n');
+    out.push_str(&format_ranked_concern_block(concern, text, rank));
     out
 }
 
@@ -148,8 +148,8 @@ mod tests {
 
     #[test]
     fn appends_blocks_consistently() {
-        let body = append_block("Existing text.\n", "billing", "New note");
-        assert_eq!(body, "Existing text.\n\n### billing\n\nNew note\n");
+        let body = append_block("Existing text.\n", "billing", "New note", 2);
+        assert_eq!(body, "Existing text.\n\n### billing [r2]\n\nNew note\n");
     }
 
     #[test]
@@ -161,12 +161,13 @@ mod tests {
             id: "ctx-7f3a9b".into(),
             concern: "billing".into(),
             text: "Investigated renewal edge case.".into(),
+            rank: 3,
         };
 
         append_to_document(&args, &base).unwrap();
 
         let written = fs::read_to_string(base.join(".context/billing.md")).unwrap();
-        assert!(written.contains("### billing"));
+        assert!(written.contains("### billing [r3]"));
         assert!(written.contains("Investigated renewal edge case."));
 
         fs::remove_dir_all(base).unwrap();
@@ -181,6 +182,7 @@ mod tests {
             id: "ctx-7f3a9b".into(),
             concern: "token-expiry".into(),
             text: "This should fail".into(),
+            rank: 4,
         };
 
         let err = append_to_document(&args, &base).unwrap_err();

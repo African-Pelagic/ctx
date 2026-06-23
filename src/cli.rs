@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(name = "ctx")]
@@ -39,7 +39,9 @@ pub enum Command {
     Suggest(SuggestArgs),
     #[command(about = "Append body text to an existing document under an active concern")]
     Append(AppendArgs),
-    #[command(about = "Assemble the subset of context relevant to explicit predicates")]
+    #[command(about = "Backfill rank metadata into existing context headings")]
+    BackfillRanks(BackfillRanksArgs),
+    #[command(about = "Assemble active context, optionally narrowed by explicit predicates")]
     Assemble(AssembleArgs),
     #[command(about = "Record concern-level supersession from one document to another")]
     Supersede(SupersedeArgs),
@@ -90,6 +92,16 @@ pub struct NewArgs {
         help = "Comma-separated component labels used for deterministic assembly"
     )]
     pub components: Vec<String>,
+
+    #[arg(long, help = "Initial text to write into the new document body")]
+    pub text: Option<String>,
+
+    #[arg(
+        long,
+        value_parser = clap::value_parser!(u8).range(1..=5),
+        help = "Context rank for newly added text, from 1 to 5"
+    )]
+    pub rank: Option<u8>,
 }
 
 #[derive(Debug, Args)]
@@ -105,15 +117,33 @@ pub struct AppendArgs {
 
     #[arg(long, help = "Text to append to the document body")]
     pub text: String,
+
+    #[arg(
+        long,
+        value_parser = clap::value_parser!(u8).range(1..=5),
+        help = "Context rank for this appended text, from 1 to 5"
+    )]
+    pub rank: u8,
+}
+
+#[derive(Debug, Args)]
+pub struct BackfillRanksArgs {
+    #[arg(
+        long,
+        value_parser = clap::value_parser!(u8).range(1..=5),
+        help = "Default rank to assign to headings that do not already have one"
+    )]
+    pub default_rank: u8,
 }
 
 #[derive(Debug, Args)]
 pub struct AssembleArgs {
     #[arg(
         long,
-        help = "Match documents whose scope.paths overlap this path pattern"
+        action = clap::ArgAction::Append,
+        help = "Match documents whose scope.paths overlap this path pattern; repeat to include multiple paths"
     )]
-    pub path: Option<String>,
+    pub path: Vec<String>,
 
     #[arg(long, help = "Match documents that declare this component")]
     pub component: Option<String>,
@@ -206,4 +236,55 @@ pub struct RefreshArgs {
 pub struct CheckArgs {
     #[arg(long, help = "Escalate warning-class issues to errors")]
     pub strict: bool,
+}
+
+pub fn render_help_dump() -> String {
+    let mut sections = Vec::new();
+    sections.push(render_help_for(Cli::command()));
+
+    for subcommand in [
+        "init",
+        "new",
+        "index",
+        "list",
+        "guidance",
+        "search",
+        "suggest",
+        "append",
+        "backfill-ranks",
+        "assemble",
+        "supersede",
+        "refresh",
+        "sync",
+        "check",
+        "gc",
+    ] {
+        let mut command = Cli::command();
+        let sub = command
+            .find_subcommand_mut(subcommand)
+            .expect("declared subcommand must exist")
+            .clone();
+        sections.push(render_help_for(sub));
+    }
+
+    sections.join("\n\n")
+}
+
+fn render_help_for(mut command: clap::Command) -> String {
+    let title = if command.get_name() == "ctx" {
+        "# ctx --help".to_string()
+    } else {
+        format!("# ctx {} --help", command.get_name())
+    };
+
+    let mut bytes = Vec::new();
+    command
+        .write_long_help(&mut bytes)
+        .expect("writing help into memory should not fail");
+    let mut help = String::from_utf8(bytes).expect("clap help should be valid UTF-8");
+    while help.ends_with('\n') {
+        help.pop();
+    }
+
+    format!("{title}\n\n```text\n{help}\n```")
 }
