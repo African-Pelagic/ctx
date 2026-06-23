@@ -146,12 +146,87 @@ pub fn extract_concern_section(body: &str, concern: &str) -> Option<String> {
     Some(section_lines.join("\n").trim().to_string() + "\n")
 }
 
+pub fn sort_concern_sections_by_rank(body: &str) -> String {
+    #[derive(Clone)]
+    struct Section {
+        rank: Option<u8>,
+        start: usize,
+        text: String,
+    }
+
+    let lines = body.lines().collect::<Vec<_>>();
+    let mut preamble = Vec::new();
+    let mut sections = Vec::new();
+    let mut current_start = None;
+
+    for (index, line) in lines.iter().enumerate() {
+        if line.starts_with("### ") {
+            if let Some(start) = current_start.replace(index) {
+                sections.push(Section {
+                    rank: parse_concern_rank(lines[start]),
+                    start,
+                    text: lines[start..index].join("\n"),
+                });
+            } else {
+                preamble = lines[..index].to_vec();
+            }
+        }
+    }
+
+    if let Some(start) = current_start {
+        sections.push(Section {
+            rank: parse_concern_rank(lines[start]),
+            start,
+            text: lines[start..].join("\n"),
+        });
+    } else {
+        return body.to_string();
+    }
+
+    sections.sort_by(|a, b| {
+        b.rank
+            .unwrap_or(0)
+            .cmp(&a.rank.unwrap_or(0))
+            .then(a.start.cmp(&b.start))
+    });
+
+    let mut parts = Vec::new();
+    if !preamble.is_empty() {
+        parts.push(preamble.join("\n").trim_end_matches('\n').to_string());
+    }
+    parts.extend(
+        sections
+            .iter()
+            .map(|section| section.text.trim_end_matches('\n').to_string()),
+    );
+
+    let mut out = parts.join("\n\n");
+    out.push('\n');
+    out
+}
+
+fn parse_concern_rank(line: &str) -> Option<u8> {
+    let heading = line.strip_prefix("### ")?.trim();
+    for suffix in heading.split(" [").skip(1) {
+        if let Some(metadata) = suffix.strip_suffix(']') {
+            if let Some(value) = metadata.strip_prefix('r') {
+                let rank = value.parse::<u8>().ok()?;
+                if (1..=5).contains(&rank) {
+                    return Some(rank);
+                }
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         Frontmatter, Scope, Status, SupersededBy, active_concerns, concern_headings,
         extract_concern_section, format_ranked_concern_block, parse_concern_heading,
-        parse_document, recompute_status, validate_rank, write_document,
+        parse_document, recompute_status, sort_concern_sections_by_rank, validate_rank,
+        write_document,
     };
     use chrono::{TimeZone, Utc};
 
@@ -263,6 +338,33 @@ mod tests {
         assert_eq!(
             parse_concern_heading("### billing rules [n7] [r4]"),
             Some("billing rules".to_string())
+        );
+    }
+
+    #[test]
+    fn sorts_concern_sections_by_descending_rank() {
+        let body = "Intro\n\n### billing [r2]\n\nLower\n\n### auth [r5]\n\nHigher\n\n### cache [r3]\n\nMiddle\n";
+        assert_eq!(
+            sort_concern_sections_by_rank(body),
+            "Intro\n\n### auth [r5]\n\nHigher\n\n### cache [r3]\n\nMiddle\n\n### billing [r2]\n\nLower\n"
+        );
+    }
+
+    #[test]
+    fn leaves_unranked_sections_after_ranked_ones() {
+        let body = "### legacy\n\nOld\n\n### auth [r4]\n\nCurrent\n";
+        assert_eq!(
+            sort_concern_sections_by_rank(body),
+            "### auth [r4]\n\nCurrent\n\n### legacy\n\nOld\n"
+        );
+    }
+
+    #[test]
+    fn parses_rank_with_other_heading_metadata_present() {
+        let body = "### billing [n7] [r4]\n\nBody\n### auth [r2]\n\nOther\n";
+        assert_eq!(
+            sort_concern_sections_by_rank(body),
+            "### billing [n7] [r4]\n\nBody\n\n### auth [r2]\n\nOther\n"
         );
     }
 }

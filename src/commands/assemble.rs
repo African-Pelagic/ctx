@@ -4,7 +4,12 @@ use anyhow::{Context, Result};
 use glob::Pattern;
 use serde::Serialize;
 
-use crate::{cli::AssembleArgs, document::Status, output::OutputMode, registry::load_or_sync};
+use crate::{
+    cli::AssembleArgs,
+    document::{Status, sort_concern_sections_by_rank},
+    output::OutputMode,
+    registry::load_or_sync,
+};
 
 #[derive(Debug, Serialize)]
 struct InclusionReason {
@@ -171,7 +176,7 @@ fn select_documents(
 
         let content = fs::read_to_string(&entry.file)
             .with_context(|| format!("failed to read {}", entry.file))?;
-        let body = strip_frontmatter(&content);
+        let body = sort_concern_sections_by_rank(&strip_frontmatter(&content));
 
         docs.push(AssembledDocument {
             id: id.clone(),
@@ -212,14 +217,32 @@ fn format_reasons(reasons: &[InclusionReason]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
     use chrono::Utc;
 
     use super::{InclusionReason, format_reasons, select_documents, strip_frontmatter};
     use crate::{
         cli::AssembleArgs,
-        document::Status,
+        document::{Frontmatter, Scope, Status, write_document},
         registry::{DocumentEntry, Registry},
     };
+
+    fn unique_temp_dir() -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("ctx-assemble-{nanos}"))
+    }
+
+    fn write_doc(path: &Path, frontmatter: &Frontmatter, body: &str) {
+        fs::write(path, write_document(frontmatter, body).unwrap()).unwrap();
+    }
 
     #[test]
     fn strips_frontmatter_from_document() {
@@ -455,5 +478,65 @@ mod tests {
 
         let docs = select_documents(&registry, &args).unwrap();
         assert_eq!(docs.len(), 2);
+    }
+
+    #[test]
+    fn assembles_document_content_with_sections_sorted_by_rank() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(&base).unwrap();
+
+        let file = base.join("notes.md");
+        let frontmatter = Frontmatter {
+            id: "ctx-a".into(),
+            created: Utc::now(),
+            status: Status::Current,
+            concerns: vec!["billing".into(), "auth".into()],
+            scope: Scope::default(),
+            superseded_by: vec![],
+        };
+        write_doc(
+            &file,
+            &frontmatter,
+            "### billing [r2]\n\nLower\n\n### auth [r5]\n\nHigher\n",
+        );
+
+        let registry = Registry {
+            schema_version: 1,
+            generated_at: Utc::now(),
+            generated_from_commit: None,
+            documents: [(
+                "ctx-a".to_string(),
+                DocumentEntry {
+                    file: file.to_string_lossy().into_owned(),
+                    created: frontmatter.created,
+                    status: Status::Current,
+                    concerns: frontmatter.concerns.clone(),
+                    active_concerns: frontmatter.concerns.clone(),
+                    scope: Scope::default(),
+                    superseded_by: vec![],
+                },
+            )]
+            .into_iter()
+            .collect(),
+            concern_roster: Default::default(),
+            orphaned_concerns: vec![],
+            multi_owned_concerns: vec![],
+        };
+
+        let args = AssembleArgs {
+            path: vec![],
+            component: None,
+            concern: vec![],
+            paths_only: false,
+            explain: false,
+        };
+
+        let docs = select_documents(&registry, &args).unwrap();
+        assert_eq!(
+            docs[0].content,
+            "### auth [r5]\n\nHigher\n\n### billing [r2]\n\nLower\n"
+        );
+
+        fs::remove_dir_all(base).unwrap();
     }
 }
