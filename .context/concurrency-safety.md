@@ -15,7 +15,7 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### concurrency-safety
+### concurrency-safety [r3]
 
 The planned concurrency model for ctx is a single repo-wide write lock around all mutating commands, with read commands remaining lock-free by default. The lock should cover ctx new, append, supersede, and future refresh-style commands. Inside the critical section, the command should reload fresh corpus state, validate again under the lock, write any managed markdown documents atomically, rebuild derived files such as .context/.registry.json and .context/.index.json atomically, and then release the lock.
 
@@ -27,7 +27,7 @@ This model is intended to prevent lost updates, overlapping writers silently clo
 
 This concern would be superseded if ctx adopts a materially different write architecture, such as finer-grained locking by concern or document, a long-lived daemon that serializes mutations, or an append-only operation log with a separate applier.
 
-### agent-retry-behavior
+### agent-retry-behavior [r3]
 
 Agent-facing write behavior should distinguish transient lock contention from semantic conflicts. ctx should support short bounded waiting for the repo-wide write lock, using jittered backoff and a configurable lock timeout. If lock acquisition still fails after that bounded wait, the command should return a structured lock-busy error that tells the caller the operation is retryable.
 

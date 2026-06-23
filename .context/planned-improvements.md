@@ -26,19 +26,19 @@ superseded_by:
   - deterministic-drift-diagnostics
   - refresh-flow
 ---
-### refresh-flow
+### refresh-flow [r3]
 
 A first-class refresh flow should cover the common case where an existing concern is broadly right but partly stale. The intended shape is ctx refresh --concern <name>, operating on one concern at a time, carrying forward scope metadata, optionally carrying forward the old body as a draft, and recording supersession automatically. It should refuse ambiguous multi-owned concerns unless the operator or agent disambiguates them explicitly.
 
-### deterministic-drift-diagnostics
+### deterministic-drift-diagnostics [r3]
 
 Diagnostics should stay deterministic and live in ctx check. For now the focus should be explicit drift signals rather than full semantic contradiction detection. Good candidates are signals that strongly risk invalidating the utility of the corpus, such as references to superseded terms, missing scoped references, or other rule-based mismatches between active context and current code. Wording-based heuristics and concern-name similarity should be deferred for now because they are likely to be noisy.
 
-### active-only-search
+### active-only-search [r3]
 
 A search command should default to active concern owners only and ignore superseded documents unless explicitly asked otherwise. The goal is to reduce cognitive noise from stale files that still exist on disk. The intended shape is an active-only search or grep surface with an opt-in include-superseded mode.
 
-### assemble-explain
+### assemble-explain [r3]
 
 assemble-explain should make the output of ctx assemble easier to trust and easier for agents to consume by exposing why each document was included. The core behavior should be an opt-in explain mode that reports the matching predicates for each assembled document rather than leaving the caller to infer them from the result set.
 

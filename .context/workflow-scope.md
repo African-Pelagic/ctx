@@ -16,14 +16,14 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### workflow-context-scope
+### workflow-context-scope [r3]
 
 This repo treats ctx as a workflow-context tool rather than a general knowledge base. In-scope material is short-to-medium-lived engineering context that helps an agent or human modify code correctly now. The key fit test is whether the claim is local enough to implementation work and likely to need explicit supersession later.
 
-### deterministic-assembly
+### deterministic-assembly [r3]
 
 Assembly is intentionally deterministic for now. Relevant context is selected from YAML frontmatter using declared concerns, scoped paths, scoped components, and supersession state; semantic or LLM-based relevance ranking is explicitly deferred so the system remains inspectable and predictable.
 
-### non-goals
+### non-goals [r3]
 
 Out of scope are durable reference artifacts and work-organization objects: company mission, product vision, roadmap narratives, tickets, epics, feature flags as coordination primitives, broad architectural styles, code conventions, and general onboarding material. Those may be linked from workflow context, but ctx is not meant to own them.

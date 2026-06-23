@@ -24,14 +24,14 @@ superseded_by:
   - read-side-commands
   - validation-rules
 ---
-### assembly-behavior
+### assembly-behavior [r3]
 
 Read-side selection currently includes current and partially-superseded documents and excludes fully superseded ones. The implemented predicates are concern, component, and a path-pattern match against declared scope.paths. assemble can emit full body content, structured JSON, or just document paths, which makes it usable for both human review and agent pipelines.
 
-### validation-rules
+### validation-rules [r3]
 
 ctx check currently validates parseable frontmatter, orphaned concerns, stale documents, multi-owned concerns, append-only enforcement on staged .context changes, and tampering with managed frontmatter fields. Exit codes are 0 for clean, 1 for errors, and 2 for warnings only; under --strict the warning-class checks are escalated to errors.
 
-### read-side-commands
+### read-side-commands [r3]
 
 The current read surface is list, assemble, and gc. list shows the active concern roster and related notes such as multi-ownership or staleness, assemble emits the subset of documents relevant to an explicit predicate, and gc reports fully superseded documents as cleanup candidates without deleting anything.

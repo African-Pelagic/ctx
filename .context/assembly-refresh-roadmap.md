@@ -19,7 +19,7 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### context-horizon-evaluation
+### context-horizon-evaluation [r3]
 
 A horizon field remains a plausible future refinement, but it is not currently judged necessary for improving context assembly. The current retrieval pain points are more directly about deterministic selection, explainability, stale local context, and noise from stale or over-broad documents than about missing hierarchy.
 
@@ -29,7 +29,7 @@ For now the intended priority is to improve active-only search, assemble-explain
 
 If horizon is revisited later, the preferred shape is a small numeric range such as 1 through 5 with a strict documented meaning, used for interpretation, ordering, filtering, and diagnostics rather than as part of concern identity or supersession truth.
 
-### read-refresh-implementation-plan
+### read-refresh-implementation-plan [r3]
 
 The next implementation slice should focus on four related improvements and defer suggest changes: active-only search, assemble-explain, deterministic drift diagnostics, and refresh flow. The recommended implementation order is active-only search first, then assemble-explain, then deterministic drift diagnostics, and finally refresh flow. That order improves read-time trust and corpus hygiene before introducing a higher-leverage write workflow.
 

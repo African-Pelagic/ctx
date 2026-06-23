@@ -13,6 +13,6 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### multi-concern-assembly
+### multi-concern-assembly [r3]
 
 ctx assemble now accepts multiple concern predicates using repeated --concern flags or comma-separated values. Concern matching uses OR semantics: a document is included if it matches any requested concern, but it appears only once in the result set. The command also reports matched_concerns so humans and agents can see which requested concerns caused a document to be assembled.

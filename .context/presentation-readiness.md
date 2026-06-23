@@ -19,7 +19,7 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### public-package-presentation
+### public-package-presentation [r3]
 
 The public package surface now prioritizes fast comprehension over full theory. README opens with a short product pitch, explicit status, differentiators, quickstart, demo placeholders, and a short command map so a first-time reader can understand ctx without reading the full internal model first.
 
@@ -27,7 +27,7 @@ The intended presentation story is: Git records code changes, ctx records curren
 
 The repo is not yet meant to pretend to be a finished platform product. The correct public framing is early but usable, with deterministic assembly, concern-level supersession, and agent-oriented workflows as the primary differentiators. Demo assets such as a terminal video, architecture diagram, example repo, and release links can remain explicit placeholders until the maintainer supplies them.
 
-### release-quality-signals
+### release-quality-signals [r3]
 
 Public release readiness now includes stronger package metadata and a clean validation story. Cargo.toml should carry description, license, readme, repository, homepage, keywords, and categories so the package looks intentional on GitHub and crates surfaces.
 

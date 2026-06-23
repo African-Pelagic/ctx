@@ -11,6 +11,6 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### list-output-format
+### list-output-format [r3]
 
 ctx list should present the active concern roster as a readable table for humans, with explicit columns for concern name, owning document ids, source filenames, and notes. The human output should be aligned rather than tab-separated, while JSON and porcelain output should also carry the filenames so agents and scripts can map concerns back to concrete documents without a second lookup.

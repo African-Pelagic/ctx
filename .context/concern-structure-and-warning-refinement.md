@@ -15,7 +15,7 @@ scope:
   - ctx-cli
 superseded_by: []
 ---
-### concern-centric-model
+### concern-centric-model [r3]
 
 The current implementation is still document-oriented, but semantically ctx cares more about concerns than documents. Documents are best understood as the persistence layer that groups one or more workflow claims so they can be versioned, scoped, assembled, and superseded together. Concern ownership and concern-level supersession remain the real semantic core of the system.
 
@@ -23,7 +23,7 @@ That does not imply that ctx should immediately manage concern sections inside m
 
 The practical implication is that diagnostics and workflows should respect the current document-first storage model even while reasoning semantically about concerns. When the tool cannot safely and cheaply mutate concern-level body structure without stronger markup, it should avoid pretending that those sections are already first-class managed objects.
 
-### warning-refinement-plan
+### warning-refinement-plan [r3]
 
 The current inactive-concern-heading warning should be refined so it fits the existing document-first model and stays high-signal. The main problem with the first implementation is that ordinary supersession can leave historical concern sections behind in partially superseded documents, which then produces warnings that are semantically routine rather than clearly problematic.
 
@@ -37,7 +37,7 @@ Fourth, ctx should not add first-class concern-section mutation commands yet. If
 
 A concrete implementation order is: 1. narrow inactive-concern-heading to current documents only; 2. review whether partially superseded documents need a separate lower-severity diagnostic or none at all; 3. keep fully superseded document references as warnings; 4. update README and guidance wording so these diagnostics are described as drift signals rather than hard invariants about markdown section layout. This plan should be superseded if ctx later adopts explicit concern-block structure in document bodies.
 
-### warning-refinement-plan
+### warning-refinement-plan [r3]
 
 The first warning-refinement slice is now implemented. inactive-concern-heading warnings are limited to documents whose status is current, which keeps ordinary supersession residue in partially superseded documents from generating routine warning noise. fully superseded document references remain warning-class diagnostics, but their message is now framed explicitly as advisory stale-reference detection rather than structural invalidity.
 
