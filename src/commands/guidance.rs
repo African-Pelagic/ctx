@@ -76,9 +76,10 @@ fn guidance_text() -> &'static str {
 
 - .context/ is managed by ctx.
 - Do not directly edit .context documents except for recovery or repair work.
-- Use ctx assemble before relevant work. With no predicates, it assembles the active corpus by default; use explicit predicates when you want a narrower slice.
+- Use ctx assemble before relevant work. With no predicates, it assembles the active corpus for the current directory by default; use --scope subtree when nested context corpora matter.
 - Prefer ctx assemble --explain when you need the fullest deterministic picture of why documents are in scope.
 - ctx assemble accepts repeated --path flags when multiple repo paths matter.
+- Use ctx sync --cascade when parent directories should synthesize nearest child .context corpora into child-context concerns.
 - Use ctx search or ctx suggest for discovery when explicit assemble predicates are not enough.
 - Use ctx new, ctx append, ctx supersede, and ctx refresh for context updates.
 - Capture enough detail that a later agent can act without another interview.
@@ -91,7 +92,7 @@ fn guidance_text() -> &'static str {
 - If context is incomplete, inconsistent, or no longer true, update it or supersede it explicitly.
 - If the right semantic change is not clear from the code and current context, check with the operator before making the change.
 - Run ctx check after context changes.
-- Respect .contextignore when deciding what belongs in managed context.
+- Respect .contextignore and .contextrc when deciding what belongs in managed context.
 "
 }
 

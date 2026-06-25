@@ -1,7 +1,7 @@
 ---
 id: ctx-1e6057
 created: 2026-04-22T21:11:21.791748306Z
-status: current
+status: superseded
 concerns:
 - contextignore-security-boundary
 scope:
@@ -15,7 +15,10 @@ scope:
   - src/registry.rs
   components:
   - ctx-cli
-superseded_by: []
+superseded_by:
+- id: ctx-c30c19
+  concerns:
+  - contextignore-security-boundary
 ---
 ### contextignore-security-boundary [r3]
 

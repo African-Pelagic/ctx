@@ -1,7 +1,7 @@
 ---
 id: ctx-c58676
 created: 2026-04-24T15:38:55.152146192Z
-status: current
+status: partially-superseded
 concerns:
 - agents-protocol
 - guidance-command
@@ -12,7 +12,10 @@ scope:
   - src/commands/guidance.rs
   components:
   - ctx-cli
-superseded_by: []
+superseded_by:
+- id: ctx-c30c19
+  concerns:
+  - guidance-command
 ---
 ### guidance-command [r3]
 

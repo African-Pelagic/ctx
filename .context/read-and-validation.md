@@ -1,7 +1,7 @@
 ---
 id: ctx-899588
 created: 2026-04-22T17:58:46.160746329Z
-status: partially-superseded
+status: superseded
 concerns:
 - assembly-behavior
 - read-side-commands
@@ -19,6 +19,9 @@ scope:
   components:
   - ctx-cli
 superseded_by:
+- id: ctx-c30c19
+  concerns:
+  - assembly-behavior
 - id: ctx-e55cf5
   concerns:
   - read-side-commands

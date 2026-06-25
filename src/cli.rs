@@ -1,4 +1,4 @@
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Parser)]
 #[command(name = "ctx")]
@@ -47,12 +47,18 @@ pub enum Command {
     Supersede(SupersedeArgs),
     #[command(about = "Create a successor document for a stale concern")]
     Refresh(RefreshArgs),
-    #[command(about = "Rebuild the registry from .context markdown documents")]
-    Sync,
+    #[command(about = "Rebuild registries and optionally synthesize child context up the tree")]
+    Sync(SyncArgs),
     #[command(about = "Validate the context corpus and staged context changes")]
     Check(CheckArgs),
     #[command(about = "List fully superseded documents as cleanup candidates")]
     Gc,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub enum AssembleScope {
+    Current,
+    Subtree,
 }
 
 #[derive(Debug, Args)]
@@ -160,6 +166,14 @@ pub struct AssembleArgs {
 
     #[arg(long, help = "Explain why each assembled document was included")]
     pub explain: bool,
+
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = AssembleScope::Current,
+        help = "Assemble only this level's corpus or the full descendant subtree"
+    )]
+    pub scope: AssembleScope,
 }
 
 #[derive(Debug, Args)]
@@ -236,6 +250,15 @@ pub struct RefreshArgs {
 pub struct CheckArgs {
     #[arg(long, help = "Escalate warning-class issues to errors")]
     pub strict: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct SyncArgs {
+    #[arg(
+        long,
+        help = "Recursively synthesize child .context corpora into parent concern entries before syncing registries"
+    )]
+    pub cascade: bool,
 }
 
 pub fn render_help_dump() -> String {

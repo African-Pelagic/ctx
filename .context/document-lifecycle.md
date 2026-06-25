@@ -1,7 +1,7 @@
 ---
 id: ctx-489a2c
 created: 2026-04-22T17:56:46.900009419Z
-status: current
+status: partially-superseded
 concerns:
 - document-lifecycle
 - frontmatter-model
@@ -17,7 +17,10 @@ scope:
   - src/registry.rs
   components:
   - ctx-cli
-superseded_by: []
+superseded_by:
+- id: ctx-c30c19
+  concerns:
+  - document-lifecycle
 ---
 ### frontmatter-model [r3]
 

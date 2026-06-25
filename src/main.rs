@@ -7,6 +7,7 @@ mod ignore;
 mod index;
 mod output;
 mod registry;
+mod subtree;
 
 use clap::Parser;
 

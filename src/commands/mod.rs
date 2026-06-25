@@ -32,7 +32,7 @@ pub fn run(command: Command, output_mode: OutputMode) -> Result<()> {
         Command::Assemble(args) => assemble::run(args, output_mode),
         Command::Supersede(args) => supersede::run(args, output_mode),
         Command::Refresh(args) => refresh::run(args, output_mode),
-        Command::Sync => sync::run(output_mode),
+        Command::Sync(args) => sync::run(args, output_mode),
         Command::Check(args) => check::run(args, output_mode),
         Command::Gc => gc::run(output_mode),
     }

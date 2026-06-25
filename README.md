@@ -62,7 +62,9 @@ Minimal flow:
 ctx init
 ctx new auth-token-expiry --concerns token-expiry --paths src/auth.rs --non-interactive
 ctx assemble --explain
+ctx assemble --scope subtree --explain
 ctx assemble --concern token-expiry --explain
+ctx sync --cascade
 ```
 
 If you create a document with initial body text or append new context, provide a rank from `1` to `5`:
@@ -95,6 +97,8 @@ Builds the active context set by default, or a narrower set from explicit predic
 
 `--path` may be repeated.
 
+Use `--scope current` for just the current directory's `.context/` corpus, or `--scope subtree` to recursively assemble raw context from every descendant `.context/` in the subtree.
+
 Use `--explain` to show why each document was included.
 
 ### `ctx search`
@@ -118,6 +122,10 @@ Marks one document as replacing another for specific concerns.
 ### `ctx refresh`
 
 Creates a successor document for a stale concern while carrying forward scope metadata and recording supersession in the same workflow.
+
+### `ctx sync`
+
+Rebuilds the local registry by default. Use `ctx sync --cascade` to walk descendant directories, find nested `.context/` corpora, synthesize each nearest child corpus into a parent concern entry, and refresh registries bottom-up across the tree.
 
 ### `ctx check`
 
@@ -165,13 +173,19 @@ It is much less useful for tiny one-shot changes where the cost of maintaining c
 
 ## Safety Boundary
 
-`.context/` is intended to be committed, so `ctx` supports a root `.contextignore` file.
+`.context/` is intended to be committed, so `ctx` supports both a root `.contextignore` file and a root `.contextrc` file.
 
 It uses `.contextignore` to:
 
 - exclude matching `.context/*.md` files from the managed corpus
 - exclude matching repo paths from the derived code index
 - reject new documents that scope ignored paths
+
+It uses `.contextrc` to:
+
+- exclude matching directories from subtree traversal
+- prevent `ctx sync --cascade` from descending into those subtrees
+- prevent `ctx assemble --scope subtree` from reading nested `.context/` corpora there
 
 Example:
 
@@ -185,14 +199,23 @@ secrets/**
 
 Important: `.contextignore` excludes files and paths. It does not redact secrets written directly into markdown text.
 
+Example `.contextrc`:
+
+```text
+vendor/**
+dist/**
+tmp
+```
+
 ## Recommended Agent Workflow
 
 1. Run `ctx assemble` before changing code.
-2. Use `ctx search` or `ctx suggest` when explicit assembly predicates are not enough.
-3. Inspect the code, not just the context.
-4. Capture decisions, assumptions, constraints, tradeoffs, and concrete examples when they remove ambiguity.
-5. Use `ctx new`, `ctx append`, `ctx supersede`, or `ctx refresh` to keep the corpus current.
-6. Run `ctx check`.
+2. Use `ctx assemble --scope subtree` when the work spans nested context corpora.
+3. Use `ctx search` or `ctx suggest` when explicit assembly predicates are not enough.
+4. Inspect the code, not just the context.
+5. Capture decisions, assumptions, constraints, tradeoffs, and concrete examples when they remove ambiguity.
+6. Use `ctx new`, `ctx append`, `ctx supersede`, `ctx refresh`, or `ctx sync --cascade` to keep the corpus current.
+7. Run `ctx check`.
 
 
 ## License

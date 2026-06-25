@@ -1,14 +1,15 @@
-use std::fs;
+use std::{env, fs, path::Path};
 
 use anyhow::{Context, Result};
 use glob::Pattern;
 use serde::Serialize;
 
 use crate::{
-    cli::AssembleArgs,
-    document::{Status, sort_concern_sections_by_rank},
+    cli::{AssembleArgs, AssembleScope},
+    document::{Status, active_concerns, parse_document, sort_concern_sections_by_rank},
     output::OutputMode,
-    registry::load_or_sync,
+    registry::{CollectOptions, Registry, collect_documents_from_with_options, load_or_sync},
+    subtree::{rebase_scope_path, subtree_context_roots},
 };
 
 #[derive(Debug, Serialize)]
@@ -28,9 +29,29 @@ struct AssembledDocument {
     content: String,
 }
 
+#[derive(Clone, Debug)]
+struct AssemblyCandidate {
+    id: String,
+    file: String,
+    status: Status,
+    active_concerns: Vec<String>,
+    scope_paths: Vec<String>,
+    components: Vec<String>,
+    content: String,
+}
+
 pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
-    let registry = load_or_sync()?;
-    let docs = select_documents(&registry, &args)?;
+    let docs = match args.scope {
+        AssembleScope::Current => {
+            let registry = load_or_sync()?;
+            select_documents(&registry, &args)?
+        }
+        AssembleScope::Subtree => {
+            let origin = env::current_dir().context("failed to determine current directory")?;
+            let candidates = collect_subtree_candidates(&origin)?;
+            select_candidates(&candidates, &args)?
+        }
+    };
 
     match output_mode {
         OutputMode::Human => {
@@ -102,8 +123,27 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
     Ok(())
 }
 
-fn select_documents(
-    registry: &crate::registry::Registry,
+fn select_documents(registry: &Registry, args: &AssembleArgs) -> Result<Vec<AssembledDocument>> {
+    let mut candidates = Vec::new();
+    for (id, entry) in &registry.documents {
+        let content = fs::read_to_string(&entry.file)
+            .with_context(|| format!("failed to read {}", entry.file))?;
+        candidates.push(AssemblyCandidate {
+            id: id.clone(),
+            file: entry.file.clone(),
+            status: entry.status.clone(),
+            active_concerns: entry.active_concerns.clone(),
+            scope_paths: entry.scope.paths.clone(),
+            components: entry.scope.components.clone(),
+            content: sort_concern_sections_by_rank(&strip_frontmatter(&content)),
+        });
+    }
+
+    select_candidates(&candidates, args)
+}
+
+fn select_candidates(
+    candidates: &[AssemblyCandidate],
     args: &AssembleArgs,
 ) -> Result<Vec<AssembledDocument>> {
     let compiled_paths = args
@@ -115,15 +155,15 @@ fn select_documents(
         !compiled_paths.is_empty() || args.component.is_some() || !args.concern.is_empty();
 
     let mut docs = Vec::new();
-    for (id, entry) in &registry.documents {
-        if entry.status == Status::Superseded {
+    for candidate in candidates {
+        if candidate.status == Status::Superseded {
             continue;
         }
 
         let mut reasons = Vec::new();
 
         for (requested_path, pattern) in args.path.iter().zip(compiled_paths.iter()) {
-            for scope_path in &entry.scope.paths {
+            for scope_path in &candidate.scope_paths {
                 if pattern.matches(scope_path) {
                     reasons.push(InclusionReason {
                         kind: "path-match",
@@ -135,7 +175,7 @@ fn select_documents(
         }
 
         if let Some(component) = &args.component {
-            for item in &entry.scope.components {
+            for item in &candidate.components {
                 if item == component {
                     reasons.push(InclusionReason {
                         kind: "component-match",
@@ -149,7 +189,12 @@ fn select_documents(
         let mut matched_concerns = args
             .concern
             .iter()
-            .filter(|concern| entry.active_concerns.iter().any(|item| item == *concern))
+            .filter(|concern| {
+                candidate
+                    .active_concerns
+                    .iter()
+                    .any(|item| item == *concern)
+            })
             .cloned()
             .collect::<Vec<_>>();
         matched_concerns.sort();
@@ -174,22 +219,66 @@ fn select_documents(
             continue;
         }
 
-        let content = fs::read_to_string(&entry.file)
-            .with_context(|| format!("failed to read {}", entry.file))?;
-        let body = sort_concern_sections_by_rank(&strip_frontmatter(&content));
-
         docs.push(AssembledDocument {
-            id: id.clone(),
-            file: entry.file.clone(),
-            active_concerns: entry.active_concerns.clone(),
+            id: candidate.id.clone(),
+            file: candidate.file.clone(),
+            active_concerns: candidate.active_concerns.clone(),
             matched_concerns,
             reasons,
-            content: body,
+            content: candidate.content.clone(),
         });
     }
 
     docs.sort_by(|a, b| a.file.cmp(&b.file));
     Ok(docs)
+}
+
+fn collect_subtree_candidates(origin: &Path) -> Result<Vec<AssemblyCandidate>> {
+    let mut candidates = Vec::new();
+    for root in subtree_context_roots(origin)? {
+        let docs = collect_documents_from_with_options(
+            &root.base,
+            CollectOptions {
+                include_synthesized: false,
+            },
+        )?;
+
+        for (path, frontmatter) in docs {
+            let content = fs::read_to_string(&path)
+                .with_context(|| format!("failed to read {}", path.display()))?;
+            let (_, body) = parse_document(&content)
+                .with_context(|| format!("failed to parse frontmatter in {}", path.display()))?;
+            let relative_file = path
+                .strip_prefix(origin)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .into_owned();
+            let mut scope_paths = frontmatter
+                .scope
+                .paths
+                .iter()
+                .map(|scope_path| rebase_scope_path(&root.relative, scope_path))
+                .collect::<Vec<_>>();
+            scope_paths.sort();
+            scope_paths.dedup();
+            let status = frontmatter.status.clone();
+            let active = active_concerns(&frontmatter);
+            let components = frontmatter.scope.components.clone();
+
+            candidates.push(AssemblyCandidate {
+                id: frontmatter.id,
+                file: relative_file,
+                status,
+                active_concerns: active,
+                scope_paths,
+                components,
+                content: sort_concern_sections_by_rank(&body),
+            });
+        }
+    }
+
+    candidates.sort_by(|a, b| a.file.cmp(&b.file));
+    Ok(candidates)
 }
 
 fn strip_frontmatter(content: &str) -> String {
@@ -225,11 +314,15 @@ mod tests {
 
     use chrono::Utc;
 
-    use super::{InclusionReason, format_reasons, select_documents, strip_frontmatter};
+    use super::{
+        AssemblyCandidate, InclusionReason, collect_subtree_candidates, format_reasons,
+        select_candidates, select_documents, strip_frontmatter,
+    };
     use crate::{
-        cli::AssembleArgs,
+        cli::{AssembleArgs, AssembleScope},
         document::{Frontmatter, Scope, Status, write_document},
         registry::{DocumentEntry, Registry},
+        subtree::SYNTHESIZED_CHILD_CONTEXT_FILE,
     };
 
     fn unique_temp_dir() -> PathBuf {
@@ -242,6 +335,17 @@ mod tests {
 
     fn write_doc(path: &Path, frontmatter: &Frontmatter, body: &str) {
         fs::write(path, write_document(frontmatter, body).unwrap()).unwrap();
+    }
+
+    fn base_args() -> AssembleArgs {
+        AssembleArgs {
+            path: vec![],
+            component: None,
+            concern: vec![],
+            paths_only: false,
+            explain: false,
+            scope: AssembleScope::Current,
+        }
     }
 
     #[test]
@@ -278,13 +382,8 @@ mod tests {
             multi_owned_concerns: vec![],
         };
 
-        let args = AssembleArgs {
-            path: vec![],
-            component: Some("billing-service".into()),
-            concern: vec![],
-            paths_only: false,
-            explain: false,
-        };
+        let mut args = base_args();
+        args.component = Some("billing-service".into());
 
         let docs = select_documents(&registry, &args).unwrap();
         assert_eq!(docs.len(), 1);
@@ -295,52 +394,31 @@ mod tests {
 
     #[test]
     fn selects_documents_matching_any_requested_concern() {
-        let registry = Registry {
-            schema_version: 1,
-            generated_at: Utc::now(),
-            generated_from_commit: None,
-            documents: [
-                (
-                    "ctx-a".to_string(),
-                    DocumentEntry {
-                        file: "Cargo.toml".into(),
-                        created: Utc::now(),
-                        status: Status::Current,
-                        concerns: vec!["billing".into()],
-                        active_concerns: vec!["billing".into()],
-                        scope: crate::document::Scope::default(),
-                        superseded_by: vec![],
-                    },
-                ),
-                (
-                    "ctx-b".to_string(),
-                    DocumentEntry {
-                        file: "README.md".into(),
-                        created: Utc::now(),
-                        status: Status::Current,
-                        concerns: vec!["auth".into(), "sessions".into()],
-                        active_concerns: vec!["auth".into(), "sessions".into()],
-                        scope: crate::document::Scope::default(),
-                        superseded_by: vec![],
-                    },
-                ),
-            ]
-            .into_iter()
-            .collect(),
-            concern_roster: Default::default(),
-            orphaned_concerns: vec![],
-            multi_owned_concerns: vec![],
-        };
+        let candidates = vec![
+            AssemblyCandidate {
+                id: "ctx-a".into(),
+                file: "Cargo.toml".into(),
+                status: Status::Current,
+                active_concerns: vec!["billing".into()],
+                scope_paths: vec![],
+                components: vec![],
+                content: String::new(),
+            },
+            AssemblyCandidate {
+                id: "ctx-b".into(),
+                file: "README.md".into(),
+                status: Status::Current,
+                active_concerns: vec!["auth".into(), "sessions".into()],
+                scope_paths: vec![],
+                components: vec![],
+                content: String::new(),
+            },
+        ];
 
-        let args = AssembleArgs {
-            path: vec![],
-            component: None,
-            concern: vec!["billing".into(), "sessions".into()],
-            paths_only: false,
-            explain: false,
-        };
+        let mut args = base_args();
+        args.concern = vec!["billing".into(), "sessions".into()];
 
-        let docs = select_documents(&registry, &args).unwrap();
+        let docs = select_candidates(&candidates, &args).unwrap();
         assert_eq!(docs.len(), 2);
         assert_eq!(docs[0].id, "ctx-a");
         assert_eq!(docs[0].matched_concerns, vec!["billing".to_string()]);
@@ -371,52 +449,31 @@ mod tests {
 
     #[test]
     fn selects_all_active_documents_when_no_predicates_are_given() {
-        let registry = Registry {
-            schema_version: 1,
-            generated_at: Utc::now(),
-            generated_from_commit: None,
-            documents: [
-                (
-                    "ctx-a".to_string(),
-                    DocumentEntry {
-                        file: "Cargo.toml".into(),
-                        created: Utc::now(),
-                        status: Status::Current,
-                        concerns: vec!["billing".into()],
-                        active_concerns: vec!["billing".into()],
-                        scope: crate::document::Scope::default(),
-                        superseded_by: vec![],
-                    },
-                ),
-                (
-                    "ctx-b".to_string(),
-                    DocumentEntry {
-                        file: "README.md".into(),
-                        created: Utc::now(),
-                        status: Status::Superseded,
-                        concerns: vec!["auth".into()],
-                        active_concerns: vec![],
-                        scope: crate::document::Scope::default(),
-                        superseded_by: vec![],
-                    },
-                ),
-            ]
-            .into_iter()
-            .collect(),
-            concern_roster: Default::default(),
-            orphaned_concerns: vec![],
-            multi_owned_concerns: vec![],
-        };
+        let candidates = vec![
+            AssemblyCandidate {
+                id: "ctx-a".into(),
+                file: "Cargo.toml".into(),
+                status: Status::Current,
+                active_concerns: vec!["billing".into()],
+                scope_paths: vec![],
+                components: vec![],
+                content: String::new(),
+            },
+            AssemblyCandidate {
+                id: "ctx-b".into(),
+                file: "README.md".into(),
+                status: Status::Superseded,
+                active_concerns: vec![],
+                scope_paths: vec![],
+                components: vec![],
+                content: String::new(),
+            },
+        ];
 
-        let args = AssembleArgs {
-            path: vec![],
-            component: None,
-            concern: vec![],
-            paths_only: false,
-            explain: true,
-        };
+        let mut args = base_args();
+        args.explain = true;
 
-        let docs = select_documents(&registry, &args).unwrap();
+        let docs = select_candidates(&candidates, &args).unwrap();
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].id, "ctx-a");
         assert_eq!(docs[0].reasons.len(), 1);
@@ -425,58 +482,31 @@ mod tests {
 
     #[test]
     fn selects_documents_matching_any_requested_path() {
-        let registry = Registry {
-            schema_version: 1,
-            generated_at: Utc::now(),
-            generated_from_commit: None,
-            documents: [
-                (
-                    "ctx-a".to_string(),
-                    DocumentEntry {
-                        file: "Cargo.toml".into(),
-                        created: Utc::now(),
-                        status: Status::Current,
-                        concerns: vec!["billing".into()],
-                        active_concerns: vec!["billing".into()],
-                        scope: crate::document::Scope {
-                            paths: vec!["src/billing/**".into()],
-                            components: vec![],
-                        },
-                        superseded_by: vec![],
-                    },
-                ),
-                (
-                    "ctx-b".to_string(),
-                    DocumentEntry {
-                        file: "README.md".into(),
-                        created: Utc::now(),
-                        status: Status::Current,
-                        concerns: vec!["auth".into()],
-                        active_concerns: vec!["auth".into()],
-                        scope: crate::document::Scope {
-                            paths: vec!["src/auth/**".into()],
-                            components: vec![],
-                        },
-                        superseded_by: vec![],
-                    },
-                ),
-            ]
-            .into_iter()
-            .collect(),
-            concern_roster: Default::default(),
-            orphaned_concerns: vec![],
-            multi_owned_concerns: vec![],
-        };
+        let candidates = vec![
+            AssemblyCandidate {
+                id: "ctx-a".into(),
+                file: "Cargo.toml".into(),
+                status: Status::Current,
+                active_concerns: vec!["billing".into()],
+                scope_paths: vec!["src/billing/**".into()],
+                components: vec![],
+                content: String::new(),
+            },
+            AssemblyCandidate {
+                id: "ctx-b".into(),
+                file: "README.md".into(),
+                status: Status::Current,
+                active_concerns: vec!["auth".into()],
+                scope_paths: vec!["src/auth/**".into()],
+                components: vec![],
+                content: String::new(),
+            },
+        ];
 
-        let args = AssembleArgs {
-            path: vec!["src/billing/**".into(), "src/auth/**".into()],
-            component: None,
-            concern: vec![],
-            paths_only: false,
-            explain: false,
-        };
+        let mut args = base_args();
+        args.path = vec!["src/billing/**".into(), "src/auth/**".into()];
 
-        let docs = select_documents(&registry, &args).unwrap();
+        let docs = select_candidates(&candidates, &args).unwrap();
         assert_eq!(docs.len(), 2);
     }
 
@@ -523,19 +553,74 @@ mod tests {
             multi_owned_concerns: vec![],
         };
 
-        let args = AssembleArgs {
-            path: vec![],
-            component: None,
-            concern: vec![],
-            paths_only: false,
-            explain: false,
-        };
-
-        let docs = select_documents(&registry, &args).unwrap();
+        let docs = select_documents(&registry, &base_args()).unwrap();
         assert_eq!(
             docs[0].content,
             "### auth [r5]\n\nHigher\n\n### billing [r2]\n\nLower\n"
         );
+
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn subtree_collects_raw_descendant_context_and_rebases_paths() {
+        let base = unique_temp_dir();
+        fs::create_dir_all(base.join(".context")).unwrap();
+        fs::create_dir_all(base.join("apps/api/.context")).unwrap();
+
+        let root_doc = Frontmatter {
+            id: "ctx-root".into(),
+            created: Utc::now(),
+            status: Status::Current,
+            concerns: vec!["root".into()],
+            scope: Scope {
+                paths: vec!["src/root.rs".into()],
+                components: vec!["root-cli".into()],
+            },
+            superseded_by: vec![],
+        };
+        write_doc(
+            &base.join(".context/root.md"),
+            &root_doc,
+            "### root [r4]\n\nRoot note\n",
+        );
+
+        let child_doc = Frontmatter {
+            id: "ctx-child".into(),
+            created: Utc::now(),
+            status: Status::Current,
+            concerns: vec!["child".into()],
+            scope: Scope {
+                paths: vec!["src/lib.rs".into()],
+                components: vec!["api".into()],
+            },
+            superseded_by: vec![],
+        };
+        write_doc(
+            &base.join("apps/api/.context/child.md"),
+            &child_doc,
+            "### child [r4]\n\nChild note\n",
+        );
+        write_doc(
+            &base.join(format!(
+                "apps/api/.context/{SYNTHESIZED_CHILD_CONTEXT_FILE}"
+            )),
+            &Frontmatter {
+                id: "ctx-synth".into(),
+                created: Utc::now(),
+                status: Status::Current,
+                concerns: vec!["child-context:apps/api/services".into()],
+                scope: Scope::default(),
+                superseded_by: vec![],
+            },
+            "### child-context:apps/api/services [r3]\n\nGenerated summary\n",
+        );
+
+        let docs = collect_subtree_candidates(&base).unwrap();
+        assert_eq!(docs.len(), 2);
+        assert_eq!(docs[0].file, ".context/root.md");
+        assert_eq!(docs[1].file, "apps/api/.context/child.md");
+        assert_eq!(docs[1].scope_paths, vec!["apps/api/src/lib.rs".to_string()]);
 
         fs::remove_dir_all(base).unwrap();
     }

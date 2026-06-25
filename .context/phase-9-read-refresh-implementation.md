@@ -1,7 +1,7 @@
 ---
 id: ctx-fbbc96
 created: 2026-04-30T14:01:06.855425166Z
-status: current
+status: partially-superseded
 concerns:
 - active-only-search
 - assemble-explain
@@ -21,7 +21,10 @@ scope:
   - src/document.rs
   components:
   - ctx-cli
-superseded_by: []
+superseded_by:
+- id: ctx-c30c19
+  concerns:
+  - read-side-commands
 ---
 ### read-side-commands [r3]
 
