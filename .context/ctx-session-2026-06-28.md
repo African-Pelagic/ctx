@@ -7,8 +7,16 @@ concerns:
 scope:
   paths:
   - src/cli.rs
+  - src/commands/check.rs
   - src/commands/mod.rs
+  - src/commands/publish.rs
+  - src/commands/serve.rs
   - src/commands/service.rs
+  - src/commands/sync.rs
+  - src/registry.rs
+  - src/subtree.rs
+  - .context/org-published-surface.md
+  - .context/org-published-surface-v2.md
   components: []
 superseded_by: []
 ---
@@ -31,3 +39,7 @@ Session with goose on 2026-06-28. Topics covered:
 ### ctx-session-2026-06-28 [r2]
 
 5. ctx publish implemented and shipped (commit 971cf18). New command exports concerns as Org files to the corpus root (alongside .context/). One file per concern, always overwritten. Markdown-to-Org rendering handles headings (### → ***), bold (**x** → *x*), inline code (`x` → =x=), fenced code blocks (→ #+BEGIN_SRC/#+END_SRC), and markdown links ([text](url) → [[url][text]]). Org file header: #+TITLE: concern-name, #+PROPERTY: PUBLISHED <timestamp>, #+PROPERTY: SOURCE_DOC <owner-id>. ctx check gained ORPHANED_ORG_FILE (org file for nonexistent concern) and STALE_ORG_FILE (org file older than owning document). No lifecycle gating, no manifest, no --all flag. 80 tests pass.
+
+### ctx-session-2026-06-28 [r2]
+
+Session complete. All work committed and pushed. Two commits: 8d63a14 (MCP server, ctx service, search, assemble --explain, ctx refresh, remove sync --cascade) and 971cf18 (ctx publish). Scope paths updated to reflect full set of files touched: src/cli.rs, src/commands/mod.rs, src/commands/service.rs, src/commands/serve.rs, src/commands/publish.rs, src/commands/check.rs, src/commands/sync.rs, src/registry.rs, src/subtree.rs, .context/org-published-surface-v2.md, .context/org-published-surface.md.
