@@ -8,8 +8,6 @@ use anyhow::{Context, Result};
 
 use crate::ignore::ContextTraversalIgnore;
 
-pub const SYNTHESIZED_CHILD_CONTEXT_FILE: &str = "ctx-child-context.md";
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContextRoot {
     pub base: PathBuf,
@@ -33,14 +31,6 @@ pub fn subtree_context_roots(base: &Path) -> Result<Vec<ContextRoot>> {
 
 pub fn context_dir_exists(base: &Path) -> bool {
     base.join(".context").is_dir()
-}
-
-pub fn synthesized_child_context_path(base: &Path) -> PathBuf {
-    base.join(".context").join(SYNTHESIZED_CHILD_CONTEXT_FILE)
-}
-
-pub fn is_synthesized_child_context_path(path: &Path) -> bool {
-    path.file_name() == Some(OsStr::new(SYNTHESIZED_CHILD_CONTEXT_FILE))
 }
 
 pub fn rebase_scope_path(relative: &Path, scope_path: &str) -> String {
@@ -137,10 +127,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{
-        ContextRoot, SYNTHESIZED_CHILD_CONTEXT_FILE, child_context_roots, rebase_scope_path,
-        subtree_context_roots, synthesized_child_context_path,
-    };
+    use super::{ContextRoot, child_context_roots, rebase_scope_path, subtree_context_roots};
 
     fn unique_temp_dir() -> PathBuf {
         let nanos = SystemTime::now()
@@ -224,14 +211,5 @@ mod tests {
             "apps/api/src/**"
         );
         assert_eq!(rebase_scope_path(Path::new(""), "src/**"), "src/**");
-    }
-
-    #[test]
-    fn returns_synthesized_child_context_file_path() {
-        let base = unique_temp_dir();
-        assert_eq!(
-            synthesized_child_context_path(&base),
-            base.join(".context").join(SYNTHESIZED_CHILD_CONTEXT_FILE)
-        );
     }
 }

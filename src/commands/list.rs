@@ -15,6 +15,16 @@ struct ListRow {
     notes: Vec<String>,
 }
 
+pub(crate) fn collect(_output_mode: OutputMode) -> Result<serde_json::Value> {
+    let registry = load_or_sync()?;
+    let rows = build_rows(&registry);
+    Ok(serde_json::json!({
+        "roster": rows,
+        "orphaned_concerns": registry.orphaned_concerns,
+        "multi_owned_concerns": registry.multi_owned_concerns,
+    }))
+}
+
 pub fn run(output_mode: OutputMode) -> Result<()> {
     let registry = load_or_sync()?;
     let rows = build_rows(&registry);

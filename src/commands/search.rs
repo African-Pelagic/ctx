@@ -6,21 +6,25 @@ use serde::Serialize;
 use crate::{cli::SearchArgs, document::Status, output::OutputMode, registry::load_or_sync};
 
 #[derive(Debug, Serialize)]
-struct SearchMatch {
-    line_number: usize,
-    line: String,
+pub(crate) struct SearchMatch {
+    pub line_number: usize,
+    pub line: String,
 }
 
 #[derive(Debug, Serialize)]
-struct SearchResult {
-    id: String,
-    file: String,
-    active_concerns: Vec<String>,
-    matches: Vec<SearchMatch>,
+pub(crate) struct SearchResult {
+    pub id: String,
+    pub file: String,
+    pub active_concerns: Vec<String>,
+    pub matches: Vec<SearchMatch>,
+}
+
+pub(crate) fn collect(args: &SearchArgs) -> Result<Vec<SearchResult>> {
+    search_documents(args)
 }
 
 pub fn run(args: SearchArgs, output_mode: OutputMode) -> Result<()> {
-    let results = search_documents(&args)?;
+    let results = collect(&args)?;
 
     match output_mode {
         OutputMode::Human => {

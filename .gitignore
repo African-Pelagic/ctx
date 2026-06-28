@@ -1,3 +1,5 @@
 /target
 .context/.registry.json
 .context/.index.json
+.cargo-home/
+.codex

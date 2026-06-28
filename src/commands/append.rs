@@ -11,6 +11,11 @@ use crate::{
     registry::{load_or_sync_from, sync_corpus_from},
 };
 
+pub(crate) fn append(args: AppendArgs) -> anyhow::Result<String> {
+    append_to_document(&args, Path::new("."))?;
+    Ok(format!("Appended note to {} for concern {}", args.id, args.concern))
+}
+
 pub fn run(args: AppendArgs, output_mode: OutputMode) -> Result<()> {
     append_to_document(&args, Path::new("."))?;
 

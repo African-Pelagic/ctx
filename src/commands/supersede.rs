@@ -9,6 +9,11 @@ use crate::{
     registry::{load_or_sync_from, sync_corpus_from},
 };
 
+pub(crate) fn supersede(args: SupersedeArgs) -> anyhow::Result<String> {
+    supersede_document(&args, Path::new("."))?;
+    Ok(format!("Recorded supersession for {} by {}", args.id, args.by_id))
+}
+
 pub fn run(args: SupersedeArgs, output_mode: OutputMode) -> Result<()> {
     supersede_document(&args, Path::new("."))?;
 

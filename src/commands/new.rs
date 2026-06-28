@@ -72,6 +72,18 @@ pub fn run(args: NewArgs, output_mode: OutputMode) -> Result<()> {
     Ok(())
 }
 
+/// Callable directly without OutputMode — used by the MCP server.
+pub(crate) fn create(args: NewArgs) -> anyhow::Result<String> {
+    match create_document(&args, Path::new(".")) {
+        Ok(created) => Ok(format!("Created {} ({})", created.file.display(), created.id)),
+        Err(NewCommandError::Conflicts(conflicts)) => {
+            Ok(format!("Conflict: concerns already owned: {}", 
+                conflicts.iter().map(|c| c.concern.clone()).collect::<Vec<_>>().join(", ")))
+        }
+        Err(NewCommandError::Fatal(err)) => Err(err),
+    }
+}
+
 enum NewCommandError {
     Fatal(anyhow::Error),
     Conflicts(Vec<Conflict>),

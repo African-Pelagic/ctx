@@ -19,20 +19,24 @@ use crate::{
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
-enum Severity {
+pub(crate) enum Severity {
     Warning,
     Error,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-struct Issue {
-    severity: Severity,
-    code: &'static str,
-    file: String,
-    message: String,
+pub(crate) struct Issue {
+    pub severity: Severity,
+    pub code: &'static str,
+    pub file: String,
+    pub message: String,
 }
 
 type ParsedDocument = (std::path::PathBuf, Frontmatter);
+
+pub(crate) fn collect(base: &Path, strict: bool) -> Result<Vec<Issue>> {
+    collect_issues(base, strict)
+}
 
 pub fn run(args: CheckArgs, output_mode: OutputMode) -> Result<()> {
     let issues = collect_issues(Path::new("."), args.strict)?;

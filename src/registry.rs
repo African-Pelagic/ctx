@@ -12,7 +12,6 @@ use crate::{
     document::{Frontmatter, Scope, Status, SupersededBy, active_concerns, parse_document},
     git::current_commit_short,
     ignore::{ContextIgnore, requires_refresh},
-    subtree::is_synthesized_child_context_path,
 };
 
 pub const SCHEMA_VERSION: u32 = 1;
@@ -42,19 +41,6 @@ pub struct Registry {
     pub concern_roster: BTreeMap<String, ConcernRosterEntry>,
     pub orphaned_concerns: Vec<String>,
     pub multi_owned_concerns: Vec<String>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct CollectOptions {
-    pub include_synthesized: bool,
-}
-
-impl Default for CollectOptions {
-    fn default() -> Self {
-        Self {
-            include_synthesized: true,
-        }
-    }
 }
 
 impl Registry {
@@ -167,13 +153,6 @@ pub fn registry_path_from(base: &Path) -> PathBuf {
 }
 
 pub fn collect_documents_from(base: &Path) -> Result<Vec<(PathBuf, Frontmatter)>> {
-    collect_documents_from_with_options(base, CollectOptions::default())
-}
-
-pub fn collect_documents_from_with_options(
-    base: &Path,
-    options: CollectOptions,
-) -> Result<Vec<(PathBuf, Frontmatter)>> {
     let pattern = format!("{}/{}", context_dir_from(base).display(), "*.md");
     let mut docs = Vec::new();
     let ignore = ContextIgnore::load_from(base)?;
@@ -181,9 +160,6 @@ pub fn collect_documents_from_with_options(
     for entry in glob::glob(&pattern).with_context(|| format!("invalid glob pattern {pattern}"))? {
         let path =
             entry.with_context(|| format!("failed to enumerate files matching {pattern}"))?;
-        if !options.include_synthesized && is_synthesized_child_context_path(&path) {
-            continue;
-        }
         let relative = path
             .strip_prefix(base)
             .unwrap_or(&path)

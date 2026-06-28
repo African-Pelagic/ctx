@@ -9,21 +9,25 @@ use crate::{
 };
 
 #[derive(Debug, Serialize)]
-struct Suggestion {
-    id: String,
-    file: String,
-    active_concerns: Vec<String>,
-    matched_paths: Vec<String>,
-    reasons: Vec<String>,
+pub(crate) struct Suggestion {
+    pub id: String,
+    pub file: String,
+    pub active_concerns: Vec<String>,
+    pub matched_paths: Vec<String>,
+    pub reasons: Vec<String>,
 }
 
-pub fn run(args: SuggestArgs, output_mode: OutputMode) -> Result<()> {
+pub(crate) fn collect(args: &SuggestArgs) -> Result<Vec<Suggestion>> {
     let path = args
         .path
         .as_deref()
         .ok_or_else(|| anyhow::anyhow!("--path is required"))?;
     let index = load_or_build_index_from(std::path::Path::new("."))?;
-    let suggestions = suggest_for_path(path, &index.documents)?;
+    suggest_for_path(path, &index.documents)
+}
+
+pub fn run(args: SuggestArgs, output_mode: OutputMode) -> Result<()> {
+    let suggestions = collect(&args)?;
 
     match output_mode {
         OutputMode::Human => {

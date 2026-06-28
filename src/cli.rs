@@ -47,12 +47,16 @@ pub enum Command {
     Supersede(SupersedeArgs),
     #[command(about = "Create a successor document for a stale concern")]
     Refresh(RefreshArgs),
-    #[command(about = "Rebuild registries and optionally synthesize child context up the tree")]
+    #[command(about = "Rebuild the registry from disk")]
     Sync(SyncArgs),
     #[command(about = "Validate the context corpus and staged context changes")]
     Check(CheckArgs),
     #[command(about = "List fully superseded documents as cleanup candidates")]
     Gc,
+    #[command(about = "Start an MCP server exposing ctx tools over stdio")]
+    Serve,
+    #[command(about = "Manage the ctx systemd user service")]
+    Service(ServiceArgs),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -253,12 +257,30 @@ pub struct CheckArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct SyncArgs {
+pub struct SyncArgs {}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub enum ServiceAction {
+    /// Write the unit file and enable the service
+    Install,
+    /// Disable and remove the unit file
+    Remove,
+    /// Start the service now
+    Start,
+    /// Stop the service now
+    Stop,
+}
+
+#[derive(Debug, Args)]
+pub struct ServiceArgs {
+    #[arg(value_enum, help = "Action to perform on the ctx systemd user service")]
+    pub action: ServiceAction,
+
     #[arg(
         long,
-        help = "Recursively synthesize child .context corpora into parent concern entries before syncing registries"
+        help = "Working directory the service will run in (default: current directory)"
     )]
-    pub cascade: bool,
+    pub workdir: Option<String>,
 }
 
 pub fn render_help_dump() -> String {
@@ -281,14 +303,14 @@ pub fn render_help_dump() -> String {
         "sync",
         "check",
         "gc",
+        "service",
     ] {
         let mut command = Cli::command();
         let sub = command
             .find_subcommand_mut(subcommand)
             .expect("declared subcommand must exist")
             .clone();
-        sections.push(render_help_for(sub));
-    }
+        sections.push(render_help_for(sub));    }
 
     sections.join("\n\n")
 }

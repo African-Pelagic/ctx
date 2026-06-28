@@ -76,7 +76,7 @@ fn guidance_text() -> &'static str {
 
 - .context/ is managed by ctx.
 - Do not directly edit .context documents except for recovery or repair work.
-- Use ctx assemble before relevant work. With no predicates, it assembles the active corpus for the current directory by default; use --scope subtree when nested context corpora matter.
+- Use ctx assemble before relevant work. With no predicates, it assembles the active corpus by default; use --scope subtree when nested context corpora matter.
 - Prefer ctx assemble --explain when you need the fullest deterministic picture of why documents are in scope.
 - ctx assemble accepts repeated --path flags when multiple repo paths matter.
 - Use ctx sync --cascade when parent directories should synthesize nearest child .context corpora into child-context concerns.

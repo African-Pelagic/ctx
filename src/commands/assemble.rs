@@ -8,25 +8,25 @@ use crate::{
     cli::{AssembleArgs, AssembleScope},
     document::{Status, active_concerns, parse_document, sort_concern_sections_by_rank},
     output::OutputMode,
-    registry::{CollectOptions, Registry, collect_documents_from_with_options, load_or_sync},
+    registry::{Registry, collect_documents_from, load_or_sync},
     subtree::{rebase_scope_path, subtree_context_roots},
 };
 
 #[derive(Debug, Serialize)]
-struct InclusionReason {
-    kind: &'static str,
-    requested: String,
-    matched: String,
+pub(crate) struct InclusionReason {
+    pub kind: &'static str,
+    pub requested: String,
+    pub matched: String,
 }
 
 #[derive(Debug, Serialize)]
-struct AssembledDocument {
-    id: String,
-    file: String,
-    active_concerns: Vec<String>,
-    matched_concerns: Vec<String>,
-    reasons: Vec<InclusionReason>,
-    content: String,
+pub(crate) struct AssembledDocument {
+    pub id: String,
+    pub file: String,
+    pub active_concerns: Vec<String>,
+    pub matched_concerns: Vec<String>,
+    pub reasons: Vec<InclusionReason>,
+    pub content: String,
 }
 
 #[derive(Clone, Debug)]
@@ -40,18 +40,23 @@ struct AssemblyCandidate {
     content: String,
 }
 
-pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
-    let docs = match args.scope {
+/// Returns assembled documents without printing — used by the MCP server.
+pub(crate) fn collect(args: &AssembleArgs) -> Result<Vec<AssembledDocument>> {
+    match args.scope {
         AssembleScope::Current => {
             let registry = load_or_sync()?;
-            select_documents(&registry, &args)?
+            select_documents(&registry, args)
         }
         AssembleScope::Subtree => {
             let origin = env::current_dir().context("failed to determine current directory")?;
             let candidates = collect_subtree_candidates(&origin)?;
-            select_candidates(&candidates, &args)?
+            select_candidates(&candidates, args)
         }
-    };
+    }
+}
+
+pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
+    let docs = collect(&args)?;
 
     match output_mode {
         OutputMode::Human => {
@@ -236,12 +241,7 @@ fn select_candidates(
 fn collect_subtree_candidates(origin: &Path) -> Result<Vec<AssemblyCandidate>> {
     let mut candidates = Vec::new();
     for root in subtree_context_roots(origin)? {
-        let docs = collect_documents_from_with_options(
-            &root.base,
-            CollectOptions {
-                include_synthesized: false,
-            },
-        )?;
+        let docs = collect_documents_from(&root.base)?;
 
         for (path, frontmatter) in docs {
             let content = fs::read_to_string(&path)
@@ -322,7 +322,6 @@ mod tests {
         cli::{AssembleArgs, AssembleScope},
         document::{Frontmatter, Scope, Status, write_document},
         registry::{DocumentEntry, Registry},
-        subtree::SYNTHESIZED_CHILD_CONTEXT_FILE,
     };
 
     fn unique_temp_dir() -> PathBuf {
@@ -600,20 +599,6 @@ mod tests {
             &base.join("apps/api/.context/child.md"),
             &child_doc,
             "### child [r4]\n\nChild note\n",
-        );
-        write_doc(
-            &base.join(format!(
-                "apps/api/.context/{SYNTHESIZED_CHILD_CONTEXT_FILE}"
-            )),
-            &Frontmatter {
-                id: "ctx-synth".into(),
-                created: Utc::now(),
-                status: Status::Current,
-                concerns: vec!["child-context:apps/api/services".into()],
-                scope: Scope::default(),
-                superseded_by: vec![],
-            },
-            "### child-context:apps/api/services [r3]\n\nGenerated summary\n",
         );
 
         let docs = collect_subtree_candidates(&base).unwrap();

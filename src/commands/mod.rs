@@ -10,6 +10,8 @@ mod list;
 mod new;
 mod refresh;
 mod search;
+mod serve;
+mod service;
 mod suggest;
 mod supersede;
 mod sync;
@@ -35,5 +37,7 @@ pub fn run(command: Command, output_mode: OutputMode) -> Result<()> {
         Command::Sync(args) => sync::run(args, output_mode),
         Command::Check(args) => check::run(args, output_mode),
         Command::Gc => gc::run(output_mode),
+        Command::Serve => serve::run(),
+        Command::Service(args) => service::run(args, output_mode),
     }
 }
