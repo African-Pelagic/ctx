@@ -53,10 +53,21 @@ pub enum Command {
     Check(CheckArgs),
     #[command(about = "List fully superseded documents as cleanup candidates")]
     Gc,
+    #[command(about = "Publish concerns as Org files alongside .context/")]
+    Publish(PublishArgs),
     #[command(about = "Start an MCP server exposing ctx tools over stdio")]
     Serve,
     #[command(about = "Manage the ctx systemd user service")]
     Service(ServiceArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct PublishArgs {
+    #[arg(
+        long,
+        help = "Publish only this concern (default: all concerns in the corpus)"
+    )]
+    pub concern: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -303,6 +314,7 @@ pub fn render_help_dump() -> String {
         "sync",
         "check",
         "gc",
+        "publish",
         "service",
     ] {
         let mut command = Cli::command();

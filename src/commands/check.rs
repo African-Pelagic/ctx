@@ -9,6 +9,7 @@ use serde::Serialize;
 
 use crate::{
     cli::CheckArgs,
+    commands::publish::{concern_name_from_org_path, existing_org_files},
     document::{Frontmatter, concern_headings, parse_document},
     git::is_stale,
     ignore::ContextIgnore,
@@ -111,7 +112,7 @@ fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
     }
 
     issues.extend(body_drift_issues(&registry, strict)?);
-
+    issues.extend(org_file_issues(&registry, strict)?);
     issues.extend(staged_diff_issues(base)?);
     issues.sort_by(|a, b| {
         a.file
@@ -119,6 +120,57 @@ fn collect_issues(base: &Path, strict: bool) -> Result<Vec<Issue>> {
             .then(a.code.cmp(b.code))
             .then(a.message.cmp(&b.message))
     });
+    Ok(issues)
+}
+
+fn org_file_issues(registry: &Registry, strict: bool) -> Result<Vec<Issue>> {
+    let mut issues = Vec::new();
+    let org_files = existing_org_files()?;
+
+    for path in &org_files {
+        let Some(concern) = concern_name_from_org_path(path) else {
+            continue;
+        };
+
+        if !registry.concern_roster.contains_key(&concern) {
+            issues.push(Issue {
+                severity: as_severity(strict),
+                code: "ORPHANED_ORG_FILE",
+                file: path.to_string_lossy().into_owned(),
+                message: format!(
+                    "org file exists for concern '{concern}' which no longer exists in the corpus"
+                ),
+            });
+            continue;
+        }
+
+        // Check staleness: compare org file mtime against owning document mtime
+        let org_mtime = fs::metadata(path)
+            .and_then(|m| m.modified())
+            .with_context(|| format!("failed to stat {}", path.display()))?;
+
+        let owners = &registry.concern_roster[&concern].owners;
+        for owner_id in owners {
+            if let Some(entry) = registry.documents.get(owner_id) {
+                let doc_mtime = fs::metadata(&entry.file)
+                    .and_then(|m| m.modified())
+                    .with_context(|| format!("failed to stat {}", entry.file))?;
+
+                if doc_mtime > org_mtime {
+                    issues.push(Issue {
+                        severity: as_severity(strict),
+                        code: "STALE_ORG_FILE",
+                        file: path.to_string_lossy().into_owned(),
+                        message: format!(
+                            "org file for concern '{concern}' is older than its source document {owner_id}"
+                        ),
+                    });
+                    break;
+                }
+            }
+        }
+    }
+
     Ok(issues)
 }
 
