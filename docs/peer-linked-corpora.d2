@@ -1,0 +1,307 @@
+################################################################################
+# Peer-Linked CTX Corpora
+#
+# Shows the two-layer architecture of each corpus:
+#   - Private working layer  : .context/*.md  (CTX documents, agent-native)
+#   - Published surface layer: published/*.public.org (Org exports, human-readable)
+#
+# And the cross-corpus relationships:
+#   - Corpus links  : named references declared in .contextrc
+#   - Bridges       : opt-in concern unification across corpora
+#   - Published reads: a corpus reads another corpus's published/ files
+################################################################################
+
+direction: right
+
+################################################################################
+# Legend
+################################################################################
+
+legend: {
+  label: Legend
+  style.fill: "#f5f5f5"
+  style.stroke: "#999999"
+  style.stroke-dash: 3
+  style.font-size: 13
+
+  l1: "── corpus link (path or S3)" { shape: text; style.font-size: 12 }
+  l2: "╌╌ bridge (concern unification)" { shape: text; style.font-size: 12 }
+  l3: "·· published read" { shape: text; style.font-size: 12 }
+  l4: "↓  ctx publish (internal)" { shape: text; style.font-size: 12 }
+}
+
+################################################################################
+# CORPUS A  (e.g. backend-service)
+################################################################################
+
+corpusA: "Corpus A\n(backend-service)" {
+  style.fill: "#eef4ff"
+  style.stroke: "#4a7fcb"
+  style.stroke-width: 2
+  style.border-radius: 10
+
+  # ── Private working layer ──────────────────────────────────────────────────
+  private: ".context/" {
+    style.fill: "#ddeeff"
+    style.stroke: "#4a7fcb"
+    style.border-radius: 6
+    label: ".context/  (private working layer)"
+
+    docs: "*.md documents\n─────────────────\nown: concerns\nscope: paths, components\nsupersession chain\n\n[agent-native, fluid]" {
+      shape: document
+      style.fill: "#ffffff"
+      style.stroke: "#4a7fcb"
+    }
+
+    registry: ".registry.json\n+ .concerns.yaml" {
+      shape: cylinder
+      style.fill: "#e8f0fe"
+      style.stroke: "#4a7fcb"
+    }
+
+    contextrc: ".contextrc\n────────────\n[corpus \"platform\"]\npath = ../platform\nbridge = auth → platform:auth\n\n[corpus \"data-team\"]\nremote = s3://acme-ctx/data-team" {
+      shape: page
+      style.fill: "#fff8e1"
+      style.stroke: "#e6a817"
+    }
+
+    docs -> registry: "ctx sync" {
+      style.stroke: "#4a7fcb"
+      style.stroke-dash: 4
+      style.font-size: 11
+    }
+  }
+
+  # ── Published surface layer ────────────────────────────────────────────────
+  published: "published/" {
+    style.fill: "#e8f5e9"
+    style.stroke: "#2e7d32"
+    style.border-radius: 6
+    label: "published/  (public surface layer)"
+
+    orgfiles: "*.public.org files\n──────────────────\none file per concern\n#+TITLE: concern-name\nlast-published timestamp\nsource document ID\n\n[human-readable, stable]" {
+      shape: document
+      style.fill: "#ffffff"
+      style.stroke: "#2e7d32"
+    }
+  }
+
+  # publish arrow (internal, vertical)
+  private.docs -> published.orgfiles: "ctx publish\n(concern → .public.org)" {
+    style.stroke: "#2e7d32"
+    style.stroke-dash: 3
+    style.font-size: 11
+  }
+}
+
+################################################################################
+# CORPUS B  (e.g. platform-infra, path-linked)
+################################################################################
+
+corpusB: "Corpus B\n(platform-infra)" {
+  style.fill: "#fff3e0"
+  style.stroke: "#e65100"
+  style.stroke-width: 2
+  style.border-radius: 10
+
+  private: ".context/" {
+    style.fill: "#ffe0b2"
+    style.stroke: "#e65100"
+    style.border-radius: 6
+    label: ".context/  (private working layer)"
+
+    docs: "*.md documents\n─────────────────\nown: concerns\n  infra-networking\n  platform-auth-contract\n  infra-deploy\n\n[agent-native, fluid]" {
+      shape: document
+      style.fill: "#ffffff"
+      style.stroke: "#e65100"
+    }
+
+    registry: ".registry.json\n+ .concerns.yaml" {
+      shape: cylinder
+      style.fill: "#fff3e0"
+      style.stroke: "#e65100"
+    }
+
+    docs -> registry: "ctx sync" {
+      style.stroke: "#e65100"
+      style.stroke-dash: 4
+      style.font-size: 11
+    }
+  }
+
+  published: "published/" {
+    style.fill: "#e8f5e9"
+    style.stroke: "#2e7d32"
+    style.border-radius: 6
+    label: "published/  (public surface layer)"
+
+    orgfiles: "*.public.org files\n──────────────────\ninfra-networking.public.org\nplatform-auth-contract.public.org\ninfra-deploy.public.org\n\n[human-readable, stable]" {
+      shape: document
+      style.fill: "#ffffff"
+      style.stroke: "#2e7d32"
+    }
+  }
+
+  private.docs -> published.orgfiles: "ctx publish" {
+    style.stroke: "#2e7d32"
+    style.stroke-dash: 3
+    style.font-size: 11
+  }
+}
+
+################################################################################
+# CORPUS C  (e.g. data-team, S3-remote-linked)
+################################################################################
+
+corpusC: "Corpus C\n(data-team  ·  remote via S3)" {
+  style.fill: "#f3e5f5"
+  style.stroke: "#6a1b9a"
+  style.stroke-width: 2
+  style.border-radius: 10
+
+  private: ".context/" {
+    style.fill: "#e1bee7"
+    style.stroke: "#6a1b9a"
+    style.border-radius: 6
+    label: ".context/  (private working layer)"
+
+    docs: "*.md documents\n─────────────────\nown: concerns\n  event-schema\n  pipeline-contract\n\n[agent-native, fluid]" {
+      shape: document
+      style.fill: "#ffffff"
+      style.stroke: "#6a1b9a"
+    }
+
+    registry: ".registry.json" {
+      shape: cylinder
+      style.fill: "#f3e5f5"
+      style.stroke: "#6a1b9a"
+    }
+
+    docs -> registry: "ctx sync" {
+      style.stroke: "#6a1b9a"
+      style.stroke-dash: 4
+      style.font-size: 11
+    }
+  }
+
+  s3: "S3 snapshot\ns3://acme-ctx/data-team" {
+    shape: cylinder
+    style.fill: "#fce4ec"
+    style.stroke: "#880e4f"
+  }
+
+  published: "published/" {
+    style.fill: "#e8f5e9"
+    style.stroke: "#2e7d32"
+    style.border-radius: 6
+    label: "published/  (public surface layer)"
+
+    orgfiles: "*.public.org files\n──────────────────\nevent-schema.public.org\npipeline-contract.public.org\n\n[human-readable, stable]" {
+      shape: document
+      style.fill: "#ffffff"
+      style.stroke: "#2e7d32"
+    }
+  }
+
+  private.docs -> published.orgfiles: "ctx publish" {
+    style.stroke: "#2e7d32"
+    style.stroke-dash: 3
+    style.font-size: 11
+  }
+
+  private.registry -> s3: "ctx corpus push\n(snapshot)" {
+    style.stroke: "#880e4f"
+    style.stroke-dash: 4
+    style.font-size: 11
+  }
+}
+
+################################################################################
+# Link cache inside Corpus A (for the remote S3 link to Corpus C)
+################################################################################
+
+corpusA.private.linkcache: ".link-cache/data-team/\n──────────────────\nmanifest.json\ncorpus/*.md  (cached)\n.registry.json" {
+  shape: cylinder
+  style.fill: "#fce4ec"
+  style.stroke: "#880e4f"
+  style.font-size: 11
+}
+
+################################################################################
+# CROSS-CORPUS CONNECTIONS
+################################################################################
+
+# ── Corpus A  →  Corpus B  (path link, declared in A's .contextrc) ──────────
+
+corpusA.private.contextrc -> corpusB.private.docs: "corpus link (path)\n[corpus \"platform\"]\npath = ../platform-infra\n\nconcerns namespaced:\nplatform:infra-networking\nplatform:auth → bridged as auth" {
+  style.stroke: "#4a7fcb"
+  style.stroke-width: 2
+  style.font-size: 11
+}
+
+# ── Bridge: A's auth ↔ B's platform:auth ─────────────────────────────────────
+
+corpusA.private.contextrc -> corpusB.private.registry: "bridge\nauth → platform:auth\n(opt-in concern unification)" {
+  style.stroke: "#e6a817"
+  style.stroke-width: 2
+  style.stroke-dash: 5
+  style.font-size: 11
+}
+
+# ── Corpus A  →  Corpus C  (remote S3 link) ──────────────────────────────────
+
+corpusC.s3 -> corpusA.private.linkcache: "ctx corpus fetch\n(explicit, offline-safe)" {
+  style.stroke: "#880e4f"
+  style.stroke-width: 2
+  style.font-size: 11
+}
+
+corpusA.private.linkcache -> corpusA.private.docs: "assembled via\n--corpus data-team" {
+  style.stroke: "#880e4f"
+  style.stroke-dash: 4
+  style.font-size: 11
+}
+
+# ── Published reads across corpora ───────────────────────────────────────────
+# Any corpus (or human / external tool) can read another corpus's published/ files
+# without ctx tooling.
+
+corpusA.published.orgfiles -> corpusB.published.orgfiles: "published read\n(no ctx tooling required)" {
+  style.stroke: "#2e7d32"
+  style.stroke-width: 2
+  style.stroke-dash: 6
+  style.font-size: 11
+  style.bold: false
+}
+
+corpusB.published.orgfiles -> corpusA.published.orgfiles: "published read" {
+  style.stroke: "#2e7d32"
+  style.stroke-width: 2
+  style.stroke-dash: 6
+  style.font-size: 11
+}
+
+corpusC.published.orgfiles -> corpusA.published.orgfiles: "published read" {
+  style.stroke: "#2e7d32"
+  style.stroke-width: 2
+  style.stroke-dash: 6
+  style.font-size: 11
+}
+
+################################################################################
+# Layer annotation strips (visual guides outside the corpora boxes)
+################################################################################
+
+privateLayer: "▌ PRIVATE WORKING LAYER\n.context/*.md  ·  agent-native  ·  fluid  ·  concern-structured\nAssembled by ctx, never read without tooling" {
+  shape: text
+  style.font-size: 13
+  style.font-color: "#4a7fcb"
+  style.bold: true
+}
+
+publishedLayer: "▌ PUBLIC SURFACE LAYER\npublished/*.public.org  ·  human-readable  ·  stable  ·  Org format\nReadable without ctx tooling  ·  never hand-edited" {
+  shape: text
+  style.font-size: 13
+  style.font-color: "#2e7d32"
+  style.bold: true
+}

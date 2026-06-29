@@ -45,3 +45,7 @@ The flow is strictly: Voice → Agent → CTX → Org. CTX is always canonical. 
 **Output location.** Org files are written to `published/<concern-name>.org` relative to the current working directory (i.e. alongside `.context/`, not inside it). The `published/` directory may be committed to git or gitignored at the operator's discretion.
 
 **Org file structure.** Each file contains: `#+TITLE:` set to the concern name; a `#+PROPERTY:` drawer with last-published timestamp and source document ID; the assembled concern body rendered as Org prose. No `#+FILETAGS:` lifecycle markers.
+
+### org-published-surface [r4]
+
+**File naming convention (2026-06-29).** Published Org files use the suffix `.public.org` rather than plain `.org`, i.e. `published/<concern-name>.public.org`. The double extension makes it trivial to filter published files from private ones when syncing or pushing to S3 (e.g. `aws s3 sync published/ s3://bucket/prefix/ --exclude "*" --include "*.public.org"`). ctx publish, ctx check staleness detection, and the S3 push surface all use this naming convention. The `published/` directory itself is still the container; the suffix is the public signal.
