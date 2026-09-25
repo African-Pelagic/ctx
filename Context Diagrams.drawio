@@ -1,0 +1,197 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+  <diagram name="Page-1" id="rjLDePuvEI6CgfYEyx0L">
+    <mxGraphModel dx="2214" dy="2245" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-1" value="&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start;&quot;&gt;%3CmxGraphModel%3E%3Croot%3E%3CmxCell%20id%3D%220%22%2F%3E%3CmxCell%20id%3D%221%22%20parent%3D%220%22%2F%3E%3CmxCell%20id%3D%222%22%20value%3D%22%22%20style%3D%22endArrow%3Dnone%3Bhtml%3D1%3Brounded%3D0%3BexitX%3D0.236%3BexitY%3D0.546%3BexitDx%3D0%3BexitDy%3D0%3BexitPerimeter%3D0%3BentryX%3D0.773%3BentryY%3D0.541%3BentryDx%3D0%3BentryDy%3D0%3BentryPerimeter%3D0%3B%22%20edge%3D%221%22%20parent%3D%221%22%3E%3CmxGeometry%20width%3D%2250%22%20height%3D%2250%22%20relative%3D%221%22%20as%3D%22geometry%22%3E%3CmxPoint%20x%3D%22152%22%20y%3D%221061%22%20as%3D%22sourcePoint%22%2F%3E%3CmxPoint%20x%3D%22453%22%20y%3D%221059%22%20as%3D%22targetPoint%22%2F%3E%3C%2FmxGeometry%3E%3C%2FmxCell%3E%3C%2Froot%3E%3C%2FmxGraphModel%3E&lt;/span&gt;" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.acute_triangle;dx=0.5;" parent="1" vertex="1">
+          <mxGeometry x="120" y="100" width="560" height="460" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-2" value="Product Context Hierarchy" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=21;" parent="1" vertex="1">
+          <mxGeometry x="304" y="40" width="219" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-4" value="Company Mission &amp;amp; Vision" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry y="100" width="190" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-5" value="Product Strategy" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry x="-10" y="160" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-6" value="Long Term Stable Features" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry y="230" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-7" value="Epics" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry y="319" width="170" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-8" value="Active Development" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry y="417" width="170" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-9" value="" style="endArrow=none;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint y="417" as="sourcePoint" />
+            <mxPoint x="690" y="417" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-15" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0;exitDx=280;exitDy=0;exitPerimeter=0;" parent="1" source="rqC1-LAv74QSP9nbAFlw-1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="403" y="90" as="sourcePoint" />
+            <mxPoint x="523" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-16" value="One piece of work is a coherent slice of the hierarchy" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="523" y="580" width="137" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-17" value="" style="endArrow=none;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint y="319" as="sourcePoint" />
+            <mxPoint x="690" y="319" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-18" value="" style="endArrow=none;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint y="220" as="sourcePoint" />
+            <mxPoint x="690" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-19" value="" style="endArrow=none;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint y="150" as="sourcePoint" />
+            <mxPoint x="690" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-20" value="" style="endArrow=none;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint y="100" as="sourcePoint" />
+            <mxPoint x="690" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-21" value="" style="shape=flexArrow;endArrow=classic;startArrow=classic;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="100" height="100" relative="1" as="geometry">
+            <mxPoint x="740" y="560" as="sourcePoint" />
+            <mxPoint x="740" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-22" value="Context Durability and Applicability" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="680" y="40" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-23" value="Durable and widely applicable context" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="780" y="100" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rqC1-LAv74QSP9nbAFlw-24" value="Rapidly changing and locally relevant context" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="780" y="530" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-2" value="" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.jumpInArrow;dy=15;dx=38;arrowHead=55;rotation=-45;" parent="1" vertex="1">
+          <mxGeometry x="-380" y="140" width="346" height="322.93" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-3" value="" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.jumpInArrow;dy=15;dx=38;arrowHead=55;rotation=-225;" parent="1" vertex="1">
+          <mxGeometry x="-290" y="160" width="353.96" height="322.64" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-4" value="Lower level context feeds back to higher levels to confirm or invalidate intent" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-290" y="270" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-5" value="Higher level context sets intent and justifies lower levels" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-130" y="250" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-12" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.acute_triangle;dx=0.5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="910" width="160" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-15" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="480" y="974.5" as="sourcePoint" />
+            <mxPoint x="553.5" y="975" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-16" value="Current Context" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="130" y="970" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-19" value="" style="group" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="240" y="940" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-17" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="iMLzWOnVFIm9mXYDMr-G-19" vertex="1">
+          <mxGeometry y="27" width="60" height="6" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-18" value="" style="rounded=0;whiteSpace=wrap;html=1;rotation=90;strokeColor=#FFFFFF;" parent="iMLzWOnVFIm9mXYDMr-G-19" vertex="1">
+          <mxGeometry y="27" width="60" height="6" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-20" value="" style="shape=trapezoid;perimeter=trapezoidPerimeter;whiteSpace=wrap;html=1;fixedSize=1;labelBackgroundColor=#595959;fillColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="330" y="960" width="110" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-21" value="New Information" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="355" y="990" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-22" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.acute_triangle;dx=0.5;" parent="1" vertex="1">
+          <mxGeometry x="580" y="910" width="160" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-27" value="" style="shape=trapezoid;perimeter=trapezoidPerimeter;whiteSpace=wrap;html=1;fixedSize=1;size=14;labelBackgroundColor=#575757;fillColor=#474747;rotation=0;" parent="1" vertex="1">
+          <mxGeometry x="608" y="970" width="105" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-23" value="New Context" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="630" y="1000" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-24" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="880" as="sourcePoint" />
+            <mxPoint x="760" y="880" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-26" value="Diachronic Integrity&lt;br&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;&#39;How did we get here?&#39;&lt;br&gt;Organisational context as semantic state machine&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" parent="1" vertex="1">
+          <mxGeometry x="247" y="790" width="333" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-28" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.acute_triangle;dx=0.5;" parent="1" vertex="1">
+          <mxGeometry x="-500" y="830" width="350" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-40" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
+          <mxGeometry x="-286" y="1033" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-31" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-325" y="832" as="sourcePoint" />
+            <mxPoint x="-230" y="1220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-32" value="" style="endArrow=none;html=1;rounded=0;entryX=0.66;entryY=0.313;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.34;exitY=0.31;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="iMLzWOnVFIm9mXYDMr-G-28" target="iMLzWOnVFIm9mXYDMr-G-28" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-380" y="930" as="sourcePoint" />
+            <mxPoint x="-320" y="930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-33" value="" style="endArrow=none;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-355" y="880" as="sourcePoint" />
+            <mxPoint x="-295" y="880" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-34" value="" style="endArrow=none;html=1;rounded=0;exitX=0;exitY=0;exitDx=87.5;exitDy=155;exitPerimeter=0;" parent="1" source="iMLzWOnVFIm9mXYDMr-G-28" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-423" y="984.5" as="sourcePoint" />
+            <mxPoint x="-240" y="985" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-36" value="Synchronic Integrity&lt;br&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Organisational context has to be consistent at any given time&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" parent="1" vertex="1">
+          <mxGeometry x="-423" y="768" width="196" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-37" value="" style="endArrow=none;html=1;rounded=0;entryX=0.846;entryY=0.703;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="iMLzWOnVFIm9mXYDMr-G-28" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-451" y="1050" as="sourcePoint" />
+            <mxPoint x="-249" y="1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-38" value="&#39;Why does this make sense?&#39;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-149.99999999999997" y="990" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-39" value="The reasoning for one piece of work" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-237" y="1230" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-42" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-150" y="1010" as="sourcePoint" />
+            <mxPoint x="-254" y="1040" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="iMLzWOnVFIm9mXYDMr-G-43" value="Context is the set and structure of claims, assumptions, decisions, intentions, and descriptions that give meaning to actions within a system" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=19;" parent="1" vertex="1">
+          <mxGeometry x="187.5" y="-210" width="425" height="150" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
