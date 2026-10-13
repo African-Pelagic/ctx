@@ -205,6 +205,14 @@ pub fn sort_concern_sections_by_rank(body: &str) -> String {
     out
 }
 
+/// Highest rank among a body's `###` concern sections, or `None` when none are ranked.
+pub fn max_concern_rank(body: &str) -> Option<u8> {
+    body.lines()
+        .filter(|line| line.starts_with("### "))
+        .filter_map(parse_concern_rank)
+        .max()
+}
+
 fn parse_concern_rank(line: &str) -> Option<u8> {
     let heading = line.strip_prefix("### ")?.trim();
     for suffix in heading.split(" [").skip(1) {
@@ -224,7 +232,7 @@ fn parse_concern_rank(line: &str) -> Option<u8> {
 mod tests {
     use super::{
         Frontmatter, Scope, Status, SupersededBy, active_concerns, concern_headings,
-        extract_concern_section, format_ranked_concern_block, parse_concern_heading,
+        extract_concern_section, format_ranked_concern_block, max_concern_rank, parse_concern_heading,
         parse_document, recompute_status, sort_concern_sections_by_rank, validate_rank,
         write_document,
     };
@@ -311,6 +319,15 @@ mod tests {
             extract_concern_section(body, "billing"),
             Some("### billing [r3]\n\nnote\n".to_string())
         );
+    }
+
+    #[test]
+    fn finds_max_concern_rank() {
+        assert_eq!(
+            max_concern_rank("### a [r2]\n\nx\n\n### b [r5]\n\ny\n"),
+            Some(5)
+        );
+        assert_eq!(max_concern_rank("### a\n\nx\n"), None);
     }
 
     #[test]

@@ -6,7 +6,9 @@ use serde::Serialize;
 
 use crate::{
     cli::{AssembleArgs, AssembleScope},
-    document::{Status, active_concerns, parse_document, sort_concern_sections_by_rank},
+    document::{
+        Status, active_concerns, max_concern_rank, parse_document, sort_concern_sections_by_rank,
+    },
     output::OutputMode,
     registry::{Registry, collect_documents_from, load_or_sync},
     subtree::{rebase_scope_path, subtree_context_roots},
@@ -25,6 +27,8 @@ pub(crate) struct AssembledDocument {
     pub file: String,
     pub active_concerns: Vec<String>,
     pub matched_concerns: Vec<String>,
+    /// Highest section rank in the document; documents are ordered by it, highest first.
+    pub rank: Option<u8>,
     pub reasons: Vec<InclusionReason>,
     pub content: String,
 }
@@ -70,6 +74,9 @@ pub fn run(args: AssembleArgs, output_mode: OutputMode) -> Result<()> {
                         println!();
                     }
                     println!("# {} - {}", doc.id, doc.file);
+                    if let Some(rank) = doc.rank {
+                        println!("Rank: {rank} (5 = highest, listed first)");
+                    }
                     println!("Active concerns: {}", doc.active_concerns.join(", "));
                     if !doc.matched_concerns.is_empty() {
                         println!("Matched concerns: {}", doc.matched_concerns.join(", "));
@@ -229,12 +236,18 @@ fn select_candidates(
             file: candidate.file.clone(),
             active_concerns: candidate.active_concerns.clone(),
             matched_concerns,
+            rank: max_concern_rank(&candidate.content),
             reasons,
             content: candidate.content.clone(),
         });
     }
 
-    docs.sort_by(|a, b| a.file.cmp(&b.file));
+    docs.sort_by(|a, b| {
+        b.rank
+            .unwrap_or(0)
+            .cmp(&a.rank.unwrap_or(0))
+            .then(a.file.cmp(&b.file))
+    });
     Ok(docs)
 }
 
