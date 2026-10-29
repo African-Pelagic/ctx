@@ -33,3 +33,7 @@ To register with goose, add to ~/.config/goose/config.yaml:
       enabled: true
 
 The implementation was live-tested: MCP handshake, tools/list returning all 8 tools, ctx_list, and ctx_assemble all responded correctly over stdio JSON-RPC.
+
+### mcp-server-implementation [r3]
+
+Update 2026-10-14: the server now exposes 12 tools. Added ctx_refresh, ctx_sync, ctx_index and ctx_gc, each backed by a pub(crate) function in refresh.rs, sync.rs, index.rs and gc.rs that the CLI run() also calls. Still not exposed: init, guidance, publish, service, backfill-ranks. Parameter gaps versus the CLI: ctx_assemble has no explain, paths or subtree scope; ctx_check is never strict; ctx_new has no --append or --components; ctx_search cannot include superseded documents. The skills using-ctx, capture-context and context-audit tell agents to prefer the mcp__ctx__ctx_* tools and fall back to the CLI for those gaps. Correction to the text above: the dependency is rmcp version 1 with features server and transport-io, and the server struct is CtxServer, not CtxMcpServer. SUPERSEDE WHEN: the tool set or the skills' MCP-first guidance changes.

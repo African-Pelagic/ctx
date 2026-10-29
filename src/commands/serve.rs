@@ -9,7 +9,7 @@ use rmcp::{
 };
 use serde::Deserialize;
 
-use crate::cli::{AppendArgs, AssembleArgs, AssembleScope, NewArgs, SearchArgs, SupersedeArgs, SuggestArgs};
+use crate::cli::{AppendArgs, AssembleArgs, AssembleScope, NewArgs, RefreshArgs, SearchArgs, SourceQueryArgs, SupersedeArgs, SuggestArgs};
 
 // ── Parameter types ────────────────────────────────────────────────────────────
 
@@ -56,6 +56,18 @@ struct SearchParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct SourceQueryParams {
+    /// Natural-language query
+    query: String,
+    /// Only search this source (optional)
+    source: Option<String>,
+    /// Only search sources with this domain tag, e.g. pe or se (optional)
+    domain: Option<String>,
+    /// Maximum chunks to return (default 5)
+    limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct SuggestParams {
     /// Repo-relative path to suggest relevant context documents for
     path: String,
@@ -69,6 +81,18 @@ struct SupersedeParams {
     by_id: String,
     /// Comma-separated concerns to supersede (all active concerns if omitted)
     concerns: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct RefreshParams {
+    /// Stale concern to scaffold a successor document for
+    concern: String,
+    /// Name for the successor document (slug, .md suffix is optional)
+    name: String,
+    /// Source document ID; required when the concern has multiple active owners
+    from: Option<String>,
+    /// Seed the successor body with the old concern section as a draft
+    draft_body: Option<bool>,
 }
 
 // ── MCP server ─────────────────────────────────────────────────────────────────
@@ -137,6 +161,19 @@ impl CtxServer {
             .map_err(|e| e.to_string())
     }
 
+    #[tool(description = "Retrieve the best-matching chunks of imported reference sources (authoritative texts) for a query, ranked by BM25. Each hit carries source, heading path and line range for citation.")]
+    fn ctx_source_query(&self, Parameters(p): Parameters<SourceQueryParams>) -> Result<String, String> {
+        let args = SourceQueryArgs {
+            query: p.query,
+            source: p.source,
+            domain: p.domain,
+            limit: p.limit.unwrap_or(5),
+        };
+        super::source::collect_query(Path::new("."), &args)
+            .and_then(|h| Ok(serde_json::to_string_pretty(&h)?))
+            .map_err(|e| e.to_string())
+    }
+
     #[tool(description = "Suggest relevant context documents for a given repo-relative path using the code index.")]
     fn ctx_suggest(&self, Parameters(p): Parameters<SuggestParams>) -> Result<String, String> {
         let args = SuggestArgs { path: Some(p.path) };
@@ -161,13 +198,62 @@ impl CtxServer {
         };
         super::supersede::supersede(args).map_err(|e| e.to_string())
     }
+
+    #[tool(description = "Scaffold a successor document for a stale concern; the old document's ownership of that concern is superseded. Fill the successor with ctx_append. Confirm with the operator before calling.")]
+    fn ctx_refresh(&self, Parameters(p): Parameters<RefreshParams>) -> Result<String, String> {
+        let args = RefreshArgs {
+            concern: p.concern,
+            from: p.from,
+            name: p.name,
+            draft_body: p.draft_body.unwrap_or(false),
+        };
+        super::refresh::refresh(&args)
+            .map(|r| {
+                serde_json::json!({
+                    "concern": args.concern,
+                    "source_id": r.source_id,
+                    "new_id": r.new_id,
+                    "file": r.file,
+                })
+                .to_string()
+            })
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "Rebuild the registry from the documents on disk. Use when the registry has drifted from .context/ after a repair edit.")]
+    fn ctx_sync(&self) -> Result<String, String> {
+        super::sync::collect()
+            .map(|registry| {
+                serde_json::json!({
+                    "documents": registry.documents.len(),
+                    "registry": ".context/.registry.json",
+                })
+                .to_string()
+            })
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "Rebuild the derived code index that ctx_check and ctx_suggest use. Run after code moves or large edits.")]
+    fn ctx_index(&self) -> Result<String, String> {
+        super::index::collect()
+            .and_then(|s| Ok(serde_json::to_string_pretty(&s)?))
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "List fully superseded documents as cleanup candidates. Reports only; never deletes.")]
+    fn ctx_gc(&self) -> Result<String, String> {
+        super::gc::collect()
+            .and_then(|e| Ok(serde_json::to_string_pretty(&e)?))
+            .map_err(|e| e.to_string())
+    }
 }
 
 #[tool_handler(
     name = "ctx",
     instructions = "ctx manages workflow context as versioned markdown documents. \
         Use ctx_assemble before starting work, ctx_new or ctx_append to record decisions, \
-        ctx_supersede when an older claim is no longer current, and ctx_check after changes."
+        ctx_supersede or ctx_refresh when an older claim is no longer current, ctx_check after changes, \
+        and ctx_sync, ctx_index or ctx_gc for corpus maintenance."
 )]
 impl ServerHandler for CtxServer {}
 

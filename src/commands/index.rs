@@ -7,19 +7,23 @@ use crate::{
 };
 
 #[derive(Debug, Serialize)]
-struct IndexSummary {
+pub(crate) struct IndexSummary {
     file: String,
     documents: usize,
     repo_files: usize,
 }
 
-pub fn run(output_mode: OutputMode) -> Result<()> {
+pub(crate) fn collect() -> Result<IndexSummary> {
     let index = refresh_index_from(std::path::Path::new("."))?;
-    let summary = IndexSummary {
+    Ok(IndexSummary {
         file: index_path().to_string_lossy().into_owned(),
         documents: index.documents.len(),
         repo_files: index.repo_files.len(),
-    };
+    })
+}
+
+pub fn run(output_mode: OutputMode) -> Result<()> {
+    let summary = collect()?;
 
     match output_mode {
         OutputMode::Human => {

@@ -7,8 +7,12 @@ use crate::{
     registry::{Registry, sync_corpus},
 };
 
+pub(crate) fn collect() -> Result<Registry> {
+    sync_corpus()
+}
+
 pub fn run(_args: SyncArgs, output_mode: OutputMode) -> Result<()> {
-    let registry = sync_corpus()?;
+    let registry = collect()?;
     emit_sync_result(&registry, output_mode)
 }
 

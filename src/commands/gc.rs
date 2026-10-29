@@ -4,12 +4,12 @@ use serde::Serialize;
 use crate::{document::Status, output::OutputMode, registry::load_or_sync};
 
 #[derive(Debug, Serialize)]
-struct GcEntry {
+pub(crate) struct GcEntry {
     id: String,
     file: String,
 }
 
-pub fn run(output_mode: OutputMode) -> Result<()> {
+pub(crate) fn collect() -> Result<Vec<GcEntry>> {
     let registry = load_or_sync()?;
     let mut entries = registry
         .documents
@@ -21,6 +21,11 @@ pub fn run(output_mode: OutputMode) -> Result<()> {
         })
         .collect::<Vec<_>>();
     entries.sort_by(|a, b| a.file.cmp(&b.file));
+    Ok(entries)
+}
+
+pub fn run(output_mode: OutputMode) -> Result<()> {
+    let entries = collect()?;
 
     match output_mode {
         OutputMode::Human => {

@@ -1,3 +1,4 @@
+mod bm25;
 mod cli;
 mod commands;
 mod document;
@@ -7,6 +8,7 @@ mod ignore;
 mod index;
 mod output;
 mod registry;
+mod source;
 mod subtree;
 
 use clap::Parser;

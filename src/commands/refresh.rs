@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn run(args: RefreshArgs, output_mode: OutputMode) -> Result<()> {
-    let refreshed = refresh_concern(&args, Path::new("."))?;
+    let refreshed = refresh(&args)?;
 
     match output_mode {
         OutputMode::Human => {
@@ -46,10 +46,14 @@ pub fn run(args: RefreshArgs, output_mode: OutputMode) -> Result<()> {
     Ok(())
 }
 
-struct RefreshResult {
-    source_id: String,
-    new_id: String,
-    file: String,
+pub(crate) struct RefreshResult {
+    pub(crate) source_id: String,
+    pub(crate) new_id: String,
+    pub(crate) file: String,
+}
+
+pub(crate) fn refresh(args: &RefreshArgs) -> Result<RefreshResult> {
+    refresh_concern(args, Path::new("."))
 }
 
 fn refresh_concern(args: &RefreshArgs, base: &Path) -> Result<RefreshResult> {

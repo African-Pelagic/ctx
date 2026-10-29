@@ -59,6 +59,57 @@ pub enum Command {
     Serve,
     #[command(about = "Manage the ctx systemd user service")]
     Service(ServiceArgs),
+    #[command(about = "Import and retrieve large reference texts (sources)")]
+    Source(SourceArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct SourceArgs {
+    #[command(subcommand)]
+    pub command: SourceCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SourceCommand {
+    #[command(about = "Import a UTF-8 text or markdown file as a reference source")]
+    Add(SourceAddArgs),
+    #[command(about = "List imported sources")]
+    List,
+    #[command(about = "Retrieve the best-matching source chunks for a query (BM25)")]
+    Query(SourceQueryArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct SourceAddArgs {
+    #[arg(help = "Path to the text or markdown file to import")]
+    pub file: std::path::PathBuf,
+
+    #[arg(
+        long,
+        help = "Source name: lowercase letters, digits, hyphens (default: file name)"
+    )]
+    pub name: Option<String>,
+
+    #[arg(
+        long,
+        help = "Domain tag such as pe or se, used to scope queries and keep terms unambiguous"
+    )]
+    pub domain: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct SourceQueryArgs {
+    #[arg(long, help = "Natural-language query")]
+    pub query: String,
+
+    #[arg(long, help = "Only search this source")]
+    pub source: Option<String>,
+
+    #[arg(long, help = "Only search sources with this domain tag")]
+    pub domain: Option<String>,
+
+    #[arg(long, default_value_t = 5, help = "Maximum chunks to return")]
+    pub limit: usize,
 }
 
 #[derive(Debug, Args)]
