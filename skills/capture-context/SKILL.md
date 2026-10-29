@@ -1,6 +1,6 @@
 ---
 name: capture-context
-description: Capture the decisions, rationale, and constraints from a recent discussion or work session into the ctx corpus (.context/), then reconcile the corpus — supersede claims the session proved wrong, refresh stale concerns, append genuinely new detail. Uses the ctx CLI only (never hand-edits .context). Use /capture-context, or whenever asked to record/update project context after a discussion, decision, or piece of work.
+description: Capture the decisions, rationale, and constraints from a recent discussion or work session into the ctx corpus (.context/), then reconcile the corpus — supersede claims the session proved wrong, refresh stale concerns, append genuinely new detail. Uses ctx only, via its MCP tools or CLI (never hand-edits .context). Use /capture-context, or whenever asked to record/update project context after a discussion, decision, or piece of work.
 ---
 
 # /capture-context
@@ -17,6 +17,10 @@ Two failure modes this skill guards against, in order of importance:
 - **Verify before you record.** Every claim must be checked against the actual repo state (code, migrations, schema, tests) — not against what the conversation *hoped* was true. This corpus has been burned by descriptive docs that drifted false; catching that drift is half the value here.
 - **A claim without a `SUPERSEDE WHEN:` is unfinished.** Every concern records what would make it stale. It's the repo idiom that keeps the corpus self-maintaining — honour it.
 - **Confirm before mutating existing concerns.** Adding new context is low-risk; `supersede` and `refresh` change what the corpus *says is true*. Present the plan and get a go-ahead before executing those (see step 5).
+
+## Use the ctx MCP tools when available
+
+If your tool list has `mcp__ctx__ctx_*` tools (load with ToolSearch if deferred), call them instead of running the `ctx` commands shown below: `ctx_list`, `ctx_search`, `ctx_suggest`, `ctx_assemble`, `ctx_new`, `ctx_append`, `ctx_supersede`, `ctx_refresh`, `ctx_check`, `ctx_sync`, `ctx_index`, `ctx_gc`. They take the same parameters as the CLI flags and need no shell quoting for bodies. Use the CLI only for what the tools lack: `ctx guidance`, `ctx check --strict` (`ctx_check` is never strict), `ctx assemble --explain` / `--scope subtree`, `ctx new --append` / `--components`, and `search --include-superseded`. See the `using-ctx` skill for the full mapping.
 
 ## Workflow
 

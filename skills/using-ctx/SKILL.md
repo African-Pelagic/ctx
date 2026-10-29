@@ -19,6 +19,22 @@ Applies when the repo has a `.context/` directory. If it does not, say so and as
 - **Respect `.contextignore` and `.contextrc`.** Do not record what they exclude.
 - If the right semantic change is unclear from the code and current context, ask the operator.
 
+## Prefer the ctx MCP tools over the CLI
+
+If your tool list has `mcp__ctx__ctx_*` tools (load them with ToolSearch if they are deferred), call those instead of shelling out to `ctx`. They run the same in-process functions as the CLI, return structured JSON, and need no shell quoting for `--text` bodies. Everywhere this skill says `ctx <command>`, the MCP tool is `ctx_<command>`: `ctx_assemble`, `ctx_list`, `ctx_search`, `ctx_suggest`, `ctx_new`, `ctx_append`, `ctx_supersede`, `ctx_refresh`, `ctx_check`, `ctx_sync`, `ctx_index`, `ctx_gc`. Parameters mirror the CLI flags (`ctx_supersede` takes `source_id` and `by_id` instead of a positional id and `--by`).
+
+The MCP tools do not cover every flag, so fall back to the CLI for these:
+
+| Need | Use the CLI |
+|---|---|
+| `--explain`, `--paths` or `--scope subtree` on assemble | `ctx assemble ...` (`ctx_assemble` is always `--scope current`) |
+| `check --strict` | `ctx check --strict` (`ctx_check` is never strict) |
+| `new --append` or `--components` | `ctx new ...` |
+| `search --include-superseded` | `ctx search ...` |
+| `init`, `guidance`, `publish`, `service`, `backfill-ranks`, `--json`/`--porcelain` | the CLI only |
+
+The MCP server runs in the directory it was started in, so `ctx_check`, `ctx_sync` and `ctx_index` act on that repo. If a tool call fails with a corpus-not-found error, the server was started elsewhere: use the CLI from the repo root. If no ctx MCP tools are available, use the CLI as written below.
+
 ## The lifecycle: what to do at each moment
 
 | Moment | Do this | Then |
@@ -78,7 +94,7 @@ A lower-ranked claim that contradicts a higher-ranked one in the same area is a 
 | `ctx gc` | List fully superseded documents as cleanup candidates. | Deleting by hand. Confirm with the operator. |
 | `ctx init` | Create `.context/` and the registry. | Running it in a repo that already has one. |
 | `ctx guidance [--add]` | Print usage guidance, or write it into `AGENTS.md` files. | n/a |
-| `ctx serve` | MCP server exposing ctx tools over stdio. | n/a |
+| `ctx serve` | MCP server exposing ctx tools over stdio (the tools listed above). | n/a |
 
 Add `--json` for structured output or `--porcelain` for stable text when parsing. Run `ctx <command> --help` before relying on a flag.
 

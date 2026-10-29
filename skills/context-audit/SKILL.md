@@ -1,6 +1,6 @@
 ---
 name: context-audit
-description: Sweep the ctx corpus (.context/) for semantic integrity — surface contradictory claims, drifted claims the code no longer supports, and structural staleness, ranked as a findings report for resolution. Corpus-driven, not session-driven; read-first, report-then-confirm; mutates only via the ctx CLI. Use /context-audit (optionally with a scope: a concern, component, or repo path), or whenever asked to check whether .context is still internally consistent and true to the code.
+description: Sweep the ctx corpus (.context/) for semantic integrity — surface contradictory claims, drifted claims the code no longer supports, and structural staleness, ranked as a findings report for resolution. Corpus-driven, not session-driven; read-first, report-then-confirm; mutates only via ctx (MCP tools or CLI). Use /context-audit (optionally with a scope: a concern, component, or repo path), or whenever asked to check whether .context is still internally consistent and true to the code.
 ---
 
 # /context-audit
@@ -37,6 +37,10 @@ A CONTRADICTION is only real when two claims both purport to describe the **same
 - **Report first; confirm each semantic fix.** The deliverable is the findings report. STRUCTURAL fixes may be batched on one confirmation. Every CONTRADICTION/DRIFT resolution (`supersede`/`refresh`) is confirmed individually — it changes what the corpus says is true.
 - **Verify against the repo, not the conversation.** A DRIFT finding is only real once you've read the code the claim scopes over and seen the mismatch. Convert relative dates to absolute.
 - **Surface, don't paper over.** When two active claims disagree, the goal is to *resolve* the disagreement (one supersedes the other, or one is corrected) — never to invent a third claim that hides it.
+
+## Use the ctx MCP tools when available
+
+If your tool list has `mcp__ctx__ctx_*` tools (load with ToolSearch if deferred), call them instead of running the `ctx` commands shown below: `ctx_list`, `ctx_search`, `ctx_suggest`, `ctx_assemble`, `ctx_new`, `ctx_append`, `ctx_supersede`, `ctx_refresh`, `ctx_check`, `ctx_sync`, `ctx_index`, `ctx_gc`. They take the same parameters as the CLI flags and need no shell quoting for bodies. Use the CLI only for what the tools lack: `ctx guidance`, `ctx check --strict` (`ctx_check` is never strict), `ctx assemble --explain` / `--scope subtree`, `ctx new --append` / `--components`, and `search --include-superseded`. See the `using-ctx` skill for the full mapping.
 
 ## Workflow
 
