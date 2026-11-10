@@ -1,0 +1,5 @@
+#+TITLE: frontmatter-model
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-489a2c
+
+A context document is markdown with YAML frontmatter managed by tooling. The current core fields are id, created, status, concerns, scope { paths, components }, and superseded_by. IDs are opaque and stable, status is derived, and active_concerns are computed from concerns minus any concerns listed in superseded_by entries.

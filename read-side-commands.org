@@ -1,0 +1,5 @@
+#+TITLE: read-side-commands
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-e55cf5
+
+The read surface now includes list, assemble, gc, and suggest. suggest is an advisory retrieval command backed by the derived code index; it accepts a repo path and returns documents whose indexed matched paths or declared scope patterns overlap that path. It does not replace deterministic assembly, but it gives humans and agents a fast way to discover candidate context near unfamiliar code.

@@ -1,0 +1,5 @@
+#+TITLE: code-aware-indexing-extension
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-e55cf5
+
+The first code-aware indexing slice is now implemented. ctx index writes a derived .context/.index.json file containing repo file inventory plus document-level matched_repo_paths, missing_scope_paths, and commit metadata. ctx suggest --path uses that derived index to surface candidate context for a repo path, while falling back to declared scope patterns. The index is advisory and derived; explicit frontmatter and superseded_by remain authoritative.

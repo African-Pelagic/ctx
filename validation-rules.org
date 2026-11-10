@@ -1,0 +1,5 @@
+#+TITLE: validation-rules
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-e55cf5
+
+ctx check still validates frontmatter integrity, orphaned concerns, staleness, multi-owned concerns, append-only staged changes, and managed frontmatter tampering. Phase 8 adds an index-derived warning when a document declares scoped paths that no longer match any repo files. That keeps path drift visible without making the derived index the source of truth for assembly or supersession.

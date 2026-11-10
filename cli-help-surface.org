@@ -1,0 +1,5 @@
+#+TITLE: cli-help-surface
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-9aec99
+
+The CLI help surface should describe each command in task-oriented language so both humans and AI agents can discover the command set quickly from --help output. The top-level help should explain ctx as a workflow-context tool with explicit concerns, scope, and supersession, and each subcommand should have a short description that makes its role obvious at a glance. Flag help should also clarify non-interactive usage and deterministic predicate-based assembly.

@@ -1,0 +1,5 @@
+#+TITLE: code-aware-context-validation
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-a1dd76
+
+Supersession judgments should be informed by the code as well as by overlapping documents. The agent or human making the decision should inspect the relevant implementation and compare it to the existing context claim. If the code still matches the older context and the new document is complementary, additive ownership is appropriate; if the code no longer matches the older operational claim, the newer document should supersede it for the affected concern.

@@ -1,0 +1,5 @@
+#+TITLE: document-lifecycle
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-489a2c
+
+The write-side lifecycle currently works as init -> new -> append -> supersede -> sync. ctx init scaffolds .context and the registry, ctx new creates a frontmatter shell, ctx append adds body content under an active concern heading, ctx supersede records concern-level replacement, and ctx sync rebuilds the derived registry from disk.

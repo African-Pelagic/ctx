@@ -1,0 +1,5 @@
+#+TITLE: supersession-model
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-489a2c
+
+Supersession is concern-level rather than whole-document by default. A document may be current, partially-superseded, or superseded depending on whether any active concerns remain. The practical authoring rule is that a document should group only concerns that are likely to be superseded together; otherwise future supersession becomes coarse and misleading.

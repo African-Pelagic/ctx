@@ -1,0 +1,5 @@
+#+TITLE: deterministic-assembly
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-f9c224
+
+Assembly is intentionally deterministic for now. Relevant context is selected from YAML frontmatter using declared concerns, scoped paths, scoped components, and supersession state; semantic or LLM-based relevance ranking is explicitly deferred so the system remains inspectable and predictable.

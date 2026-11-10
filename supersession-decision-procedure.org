@@ -1,0 +1,5 @@
+#+TITLE: supersession-decision-procedure
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-a1dd76
+
+When a new document overlaps an existing concern owner, the additive-versus-superseding decision is a semantic judgment rather than a textual diff. The decision procedure is: read the current owning document, compare the new intended claim to the old one, ask whether the old claim is still true, ask whether both documents would help or confuse if assembled together tomorrow, and then either keep both current with additive co-ownership or mark the older concern as superseded. A good practical test is whether future assembly should return both documents as current for that concern.

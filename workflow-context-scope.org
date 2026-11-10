@@ -1,0 +1,5 @@
+#+TITLE: workflow-context-scope
+#+PROPERTY: PUBLISHED 2026-06-29T08:45:33Z
+#+PROPERTY: SOURCE_DOC ctx-f9c224
+
+This repo treats ctx as a workflow-context tool rather than a general knowledge base. In-scope material is short-to-medium-lived engineering context that helps an agent or human modify code correctly now. The key fit test is whether the claim is local enough to implementation work and likely to need explicit supersession later.
