@@ -33,17 +33,17 @@ Gather evidence before forming opinions. Prefer tools that give exact, repeatabl
 
 **Use when they fit the question:**
 
-| Question | Tool |
-|---|---|
-| What does this symbol mean, where is it defined, who references it (type-aware)? | `LSP` |
-| Why is the code this way; when did this behavior change? | `git log -S`, `git log -p`, `git blame` on the specific lines |
-| Does the toolchain already flag this area? | `cargo clippy`, `cargo check`, `cargo tree -d` (Rust); the repo's linter and type checker otherwise |
-| Does current behavior match what I think it is? | Run the existing tests; write a throwaway probe in the scratchpad directory |
-| Is this library or API behaving the way I remember? | Read the dependency source, or `WebSearch` (standard mode first, extended only if thin or niche); cite what you found |
-| Has this been discussed or ticketed already? | Linear, Slack, Notion, Sentry via their connectors, if authenticated |
-| Broad sweep across many files | `Explore` agent; for a plan with trade-offs, `Plan` agent |
-| Bug or unexpected behavior is the subject | a systematic-debugging skill, if one is installed, before proposing a fix |
-| Implementation is the next step | a planning skill, then a test-driven-development skill, if installed |
+| Question                                                                         | Tool                                                                                                                  |
+|----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| What does this symbol mean, where is it defined, who references it (type-aware)? | `LSP`                                                                                                                 |
+| Why is the code this way; when did this behavior change?                         | `git log -S`, `git log -p`, `git blame` on the specific lines                                                         |
+| Does the toolchain already flag this area?                                       | `cargo clippy`, `cargo check`, `cargo tree -d` (Rust); the repo's linter and type checker otherwise                   |
+| Does current behavior match what I think it is?                                  | Run the existing tests; write a throwaway probe in the scratchpad directory                                           |
+| Is this library or API behaving the way I remember?                              | Read the dependency source, or `WebSearch` (standard mode first, extended only if thin or niche); cite what you found |
+| Has this been discussed or ticketed already?                                     | Linear, Slack, Notion, Sentry via their connectors, if authenticated                                                  |
+| Broad sweep across many files                                                    | `Explore` agent; for a plan with trade-offs, `Plan` agent                                                             |
+| Bug or unexpected behavior is the subject                                        | a systematic-debugging skill, if one is installed, before proposing a fix                                             |
+| Implementation is the next step                                                  | a planning skill, then a test-driven-development skill, if installed                                                  |
 
 If a tool you need is missing, broken, or unauthenticated, say so. Do not fall back to guessing and present it as investigated. If an index may be stale (files edited since `magellan index`), re-run it before relying on it.
 
